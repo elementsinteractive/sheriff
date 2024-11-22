@@ -176,7 +176,7 @@ func TestPublishAsGitlabIssues(t *testing.T) {
 		},
 	}
 
-	PublishAsGitlabIssues(reports, mockGitlabService)
+	_ = PublishAsGitlabIssues(reports, mockGitlabService)
 	mockGitlabService.AssertExpectations(t)
 
 	t.Run("FillsTheIssueUrl", func(t *testing.T) {

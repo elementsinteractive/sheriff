@@ -17,7 +17,7 @@ func TestCombineBeforeFuncs(t *testing.T) {
 
 	before_func := CombineBeforeFuncs(mockBeforeFuncs.Func1, mockBeforeFuncs.Func2)
 
-	before_func(nil)
+	_ = before_func(nil)
 
 	mockBeforeFuncs.AssertExpectations(t)
 }
@@ -47,7 +47,7 @@ func TestConfigureLogs(t *testing.T) {
 		flag.Bool("verbose", input, "")
 		context := cli.NewContext(nil, flag, nil)
 
-		ConfigureLogs(context)
+		_ = ConfigureLogs(context)
 
 		assert.Equal(t, zerolog.GlobalLevel(), want)
 	}
@@ -69,10 +69,10 @@ func TestConfigFileLoaderNoFile(t *testing.T) {
 func TestLogArguments(t *testing.T) {
 	flag := flag.NewFlagSet("flag", flag.ContinueOnError)
 	flag.String("some-flag", "", "")
-	flag.Set("some-flag", "value")
+	_ = flag.Set("some-flag", "value")
 	context := cli.NewContext(nil, flag, nil)
 
-	LogArguments(context)
+	_ = LogArguments(context)
 
 	// How to assert that the log message was correct?
 }

@@ -39,7 +39,8 @@ func (c *shellCommandRunner) Run(in CommandInput) (CommandOutput, error) {
 	if in.Timeout == 0 {
 		in.Timeout = defaultTimeout
 	}
-	ctx, _ := context.WithTimeout(context.Background(), in.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), in.Timeout)
+	defer cancel()
 	cmd := exec.CommandContext(ctx, in.Name, in.Args...)
 	out, err := cmd.Output()
 

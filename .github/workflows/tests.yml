@@ -1,7 +1,7 @@
 name: Test
-on: 
+on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -13,8 +13,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21.3'
+          go-version: "1.21.3"
       - name: Install dependencies
         run: go get .
-      - name: Test with the Go CLI
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60
+      - name: Test
         run: go test ./...

@@ -43,7 +43,7 @@ func TestPublishAsSpecificChannelSlackMessage(t *testing.T) {
 		ProjectConfig: scanner.ProjectConfig{SlackChannel: "channel"},
 	}
 
-	PublishAsSpecificChannelSlackMessage([]scanner.Report{report}, mockSlackService)
+	_ = PublishAsSpecificChannelSlackMessage([]scanner.Report{report}, mockSlackService)
 
 	mockSlackService.AssertExpectations(t)
 	mockSlackService.AssertNumberOfCalls(t, "PostMessage", 1)

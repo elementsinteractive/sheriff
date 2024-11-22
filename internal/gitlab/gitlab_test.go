@@ -230,7 +230,7 @@ func (c *mockClient) ListProjectIssues(projectId interface{}, opt *gitlab.ListPr
 	args := c.Called(projectId, opt, options)
 	var r *gitlab.Response
 	if resp := args.Get(1); resp != nil {
-		resp = args.Get(1).(*gitlab.Response)
+		r = args.Get(1).(*gitlab.Response)
 	}
 	return args.Get(0).([]*gitlab.Issue), r, args.Error(2)
 }
