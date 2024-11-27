@@ -1,15 +1,19 @@
 changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - octocat
   categories:
-    - title: 💥 Breaking changes
+    - title: Breaking Changes 🛠
       labels:
-        - breaking-change
-    - title: ⚡️ Improvements
+        - breaking
+    - title: New Features 🎉
       labels:
-        - enhancement
-        - documentation
-    - title: 👨‍🔧 Fixes
+        - feature
+    - title: Fixes 🔧
       labels:
-        - bugs
-    - title: 🎨 Other changes
+        - fix
+    - title: Other Changes
       labels:
         - "*"
