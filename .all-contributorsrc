@@ -1,0 +1,49 @@
+{
+  "projectName": "sheriff",
+  "projectOwner": "elementsinteractive",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 50,
+  "commit": true,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "sacha-c",
+      "name": "Sacha Brouté",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3247529?v=4",
+      "profile": "https://github.com/sacha-c",
+      "contributions": [
+        "code",
+        "design",
+        "ideas",
+        "maintenance"
+      ]
+    },
+    {
+      "login": "scastlara",
+      "name": "Sergio Castillo",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7606872?v=4",
+      "profile": "https://github.com/scastlara",
+      "contributions": [
+        "code",
+        "ideas",
+        "maintenance"
+      ]
+    },
+    {
+      "login": "jbozanowski",
+      "name": "Jakub Bożanowski",
+      "avatar_url": "https://avatars.githubusercontent.com/u/114900?v=4",
+      "profile": "https://github.com/jbozanowski",
+      "contributions": [
+        "ideas",
+        "design"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "linkToUsage": false
+}
