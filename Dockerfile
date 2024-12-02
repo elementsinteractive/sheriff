@@ -1,5 +1,4 @@
 ARG GO_VERSION=1.23.2
-ARG ALPINE_VERSION=3.20.3
 ARG OSV_SCANNER_VERSION=1.9.0
 ARG BUSYBOX_VERSION=1.37.0
 
@@ -24,3 +23,5 @@ WORKDIR /app
 COPY --from=osv-scanner /osv-scanner /usr/local/bin/osv-scanner
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/build/sheriff /usr/local/bin/sheriff
+
+ENTRYPOINT [ "sheriff" ]
