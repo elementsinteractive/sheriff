@@ -57,3 +57,23 @@ func TestValidatePathProjectPathRegex(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateUrl(t *testing.T) {
+
+	testCases := []struct {
+		urls []string
+		want bool
+	}{
+		{[]string{"gitlab://example.com"}, true},
+	}
+
+	for _, tc := range testCases {
+		err := validateURLs(nil, tc.urls)
+
+		if tc.want {
+			assert.Nil(t, err)
+		} else {
+			assert.NotNil(t, err)
+		}
+	}
+}

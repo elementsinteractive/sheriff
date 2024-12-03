@@ -9,17 +9,14 @@ import (
 	"sheriff/internal/patrol"
 	"sheriff/internal/scanner"
 	"sheriff/internal/slack"
+	"slices"
+	"strings"
 
-	zerolog "github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
 
-// Regexes very loosely defined based on GitLab's reserved names:
-// https://docs.gitlab.com/ee/user/reserved_names.html#limitations-on-usernames-project-and-group-names-and-slugs
-// In reality the regex should be more restrictive about special characters, for now we're just checking for slashes and non-whitespace characters.
-const groupPathRegex = "^\\S+(\\/\\S+)*$"   // Matches paths like "group" or "group/subgroup" ...
-const projectPathRegex = "^\\S+(\\/\\S+)+$" // Matches paths like "group/project" or "group/subgroup/project" ...
+const gitlabPathRegex = "^\\S+(\\/\\S+)+$"
 
 type CommandCategory string
 
@@ -28,18 +25,28 @@ const (
 	Tokens        CommandCategory = "Tokens:"
 	Miscellaneous CommandCategory = "Miscellaneous:"
 	Scanning      CommandCategory = "Scanning (configurable by file):"
+
+	// TODO: Figure out how to use custom types with a generic URL validator/parser
+	Gitlab string = "gitlab"
+	Issue  string = "issue"
+	Slack  string = "slack"
 )
+
+var sourceCodePlatforms = []string{Gitlab}
+var reportToPlatforms = []string{Slack, Issue}
+
+var platformUrlRegex = map[string]string{
+	Gitlab: gitlabPathRegex,
+	Slack:  "^[a-z0-9-]{1}[a-z0-9-]{0,20}$",
+	Issue:  "^$",
+}
 
 const configFlag = "config"
 const verboseFlag = "verbose"
-const testingFlag = "testing"
-const groupsFlag = "gitlab-groups"
-const projectsFlag = "gitlab-projects"
-const reportSlackChannelFlag = "report-slack-channel"
-const reportSlackProjectChannelFlag = "report-slack-project-channel"
-const reportGitlabFlag = "report-gitlab-issue"
-const silentReport = "silent"
-const publicSlackChannelFlag = "public-slack-channel"
+const urlFlag = "url"
+const reportToFlag = "report-to"
+const enableProjectReportToFlag = "enable-project-report-to"
+const silentReportFlag = "silent"
 const gitlabTokenFlag = "gitlab-token"
 const slackTokenFlag = "slack-token"
 
@@ -47,58 +54,38 @@ var sensitiveFlags = []string{gitlabTokenFlag, slackTokenFlag}
 
 var PatrolFlags = []cli.Flag{
 	&cli.StringFlag{
-		Name:  configFlag,
-		Value: "sheriff.toml",
+		Name:    configFlag,
+		Aliases: []string{"c"},
+		Value:   "sheriff.toml",
 	},
 	&cli.BoolFlag{
 		Name:     verboseFlag,
+		Aliases:  []string{"v"},
 		Usage:    "Enable verbose logging",
 		Category: string(Miscellaneous),
 		Value:    false,
 	},
 	altsrc.NewStringSliceFlag(&cli.StringSliceFlag{
-		Name:     groupsFlag,
-		Usage:    "Gitlab groups to scan for vulnerabilities (list argument which can be repeated)",
+		Name:     urlFlag,
+		Usage:    "Groups and projects to scan for vulnerabilities (list argument which can be repeated)",
 		Category: string(Scanning),
-		Action:   validatePaths(groupPathRegex),
+		Action:   validateURLs(sourceCodePlatforms),
 	}),
 	altsrc.NewStringSliceFlag(&cli.StringSliceFlag{
-		Name:     projectsFlag,
-		Usage:    "Gitlab projects to scan for vulnerabilities (list argument which can be repeated)",
-		Category: string(Scanning),
-		Action:   validatePaths(projectPathRegex),
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     testingFlag,
-		Usage:    "Enable testing mode. This can enable features that are not safe for production use.",
-		Category: string(Miscellaneous),
-		Value:    false,
-	}),
-	altsrc.NewStringFlag(&cli.StringFlag{
-		Name:     reportSlackChannelFlag,
-		Usage:    "Enable reporting to Slack through messages in the specified channel.",
+		Name:     reportToFlag,
+		Usage:    "Enable reporting to specified messaging service & name. In the format: 'service:name'.",
 		Category: string(Reporting),
+		Action:   validateURLs(reportToPlatforms),
 	}),
 	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     reportSlackProjectChannelFlag,
-		Usage:    "Enable reporting to Slack through messages in the specified project's channel. Requires a project-level configuration file specifying the channel.",
+		Name:     enableProjectReportToFlag,
+		Usage:    "Enable project-level configuration for '--report-to'.",
 		Category: string(Reporting),
+		Value:    true,
 	}),
 	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     reportGitlabFlag,
-		Usage:    "Enable reporting to GitLab through issue creation in projects affected by vulnerabilities.",
-		Category: string(Reporting),
-		Value:    false,
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     silentReport,
+		Name:     silentReportFlag,
 		Usage:    "Disable report output to stdout.",
-		Category: string(Reporting),
-		Value:    false,
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     publicSlackChannelFlag,
-		Usage:    "Allow the slack report to be posted to a public channel. Note that reports may contain sensitive information which should not be disclosed on a public channel, for this reason this flag will only be enabled when combined with the testing flag.",
 		Category: string(Reporting),
 		Value:    false,
 	}),
@@ -122,10 +109,6 @@ func PatrolAction(cCtx *cli.Context) error {
 	verbose := cCtx.Bool(verboseFlag)
 
 	var publicChannelsEnabled bool
-	if cCtx.Bool(testingFlag) {
-		zerolog.Warn().Msg("Testing mode enabled. This may enable features that are not safe for production use.")
-		publicChannelsEnabled = cCtx.Bool(publicSlackChannelFlag)
-	}
 
 	// Create services
 	gitlabService, err := gitlab.New(cCtx.String(gitlabTokenFlag))
@@ -144,14 +127,23 @@ func PatrolAction(cCtx *cli.Context) error {
 	patrolService := patrol.New(gitlabService, slackService, gitService, osvService)
 
 	// Run the scan
+	toScan, err := parseUrls(cCtx.StringSlice(urlFlag))
+	if err != nil {
+		return errors.Join(errors.New("failed to parse URLs"), err)
+	}
+
+	toReport, err := parseUrls(cCtx.StringSlice(reportToFlag))
+	if err != nil {
+		return errors.Join(errors.New("failed to parse report URLs"), err)
+	}
+
 	if warn, err := patrolService.Patrol(
-		cCtx.StringSlice(groupsFlag),
-		cCtx.StringSlice(projectsFlag),
-		cCtx.Bool(reportGitlabFlag),
-		cCtx.String(reportSlackChannelFlag),
-		cCtx.Bool(reportSlackProjectChannelFlag),
-		cCtx.Bool(silentReport),
-		verbose,
+		patrol.PatrolArgs{
+			ToScanUrls:   toScan,
+			ToReportUrls: toReport,
+			SilentReport: cCtx.Bool(silentReportFlag),
+			Verbose:      verbose,
+		},
 	); err != nil {
 		return errors.Join(errors.New("failed to scan"), err)
 	} else if warn != nil {
@@ -161,20 +153,61 @@ func PatrolAction(cCtx *cli.Context) error {
 	return nil
 }
 
-func validatePaths(regex string) func(*cli.Context, []string) error {
-	return func(_ *cli.Context, groups []string) (err error) {
-		rgx, err := regexp.Compile(regex)
-		if err != nil {
-			return err
-		}
+// validateURLs validates the URLs passed as arguments.
+// It ensures that the URL is in the format "platform:path" and that the path matches the regex for the platform.
+func validateURLs(validPrefixes []string) func(_ *cli.Context, urls []string) (err error) {
+	return func(_ *cli.Context, urls []string) (err error) {
+		for _, url := range urls {
+			parts := strings.Split(url, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid url: %v", url)
+			}
 
-		for _, path := range groups {
+			platform := parts[0]
+
+			if !slices.Contains(validPrefixes, platform) {
+				return fmt.Errorf("Unsupported repository service: %v", platform)
+			}
+
+			regex, ok := platformUrlRegex[platform]
+			if !ok {
+				return fmt.Errorf("No regex for platform: %v", platform)
+			}
+
+			// Check the URL
+			rgx, err := regexp.Compile(regex)
+			if err != nil {
+				return err
+			}
+
+			path := parts[1]
 			matched := rgx.Match([]byte(path))
 
 			if !matched {
-				return fmt.Errorf("invalid group path: %v", path)
+				return fmt.Errorf("invalid group path for platform: %v for %v", path, platform)
 			}
+
 		}
 		return
 	}
+}
+
+// parseUrls parses the URLs passed as arguments returning a struct that
+// separates the platform from the url part.
+func parseUrls(urls []string) ([]patrol.GenericUrlElem, error) {
+	var parsedUrls []patrol.GenericUrlElem
+
+	for _, url := range urls {
+		parts := strings.Split(url, ":")
+		if len(parts) != 2 {
+			// This should never happen, as the URL should have been validated before
+			return nil, fmt.Errorf("invalid url: %v", url)
+		}
+		parsedUrls = append(parsedUrls, patrol.GenericUrlElem{
+			Platform: parts[0],
+			Url:      parts[1],
+		})
+	}
+
+	return parsedUrls, nil
 }

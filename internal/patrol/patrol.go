@@ -21,10 +21,26 @@ import (
 const tempScanDir = "tmp_scans"
 const projectConfigFileName = "sheriff.toml"
 
+// GenericUrlElem is a struct to store a platform and a URL.
+// The url can represent different things depending on the platform in question:
+// For slack, it may represent a channel; for gitlab, it may represent a project, etc.
+type GenericUrlElem struct {
+	Platform string
+	Url      string
+}
+
+// PatrolArgs is a struct to store the arguments for the main patrol function.
+type PatrolArgs struct {
+	ToScanUrls   []GenericUrlElem
+	ToReportUrls []GenericUrlElem
+	SilentReport bool
+	Verbose      bool
+}
+
 // securityPatroller is the interface of the main security scanner service of this tool.
 type securityPatroller interface {
 	// Scans the given Gitlab groups and projects, creates and publishes the necessary reports
-	Patrol(grouiPaths []string, projectPaths []string, gitlabIssue bool, slackChannel string, reportProjectSlack bool, silentReport bool, verbose bool) (warn error, err error)
+	Patrol(PatrolArgs) (warn error, err error)
 }
 
 // sheriffService is the implementation of the SecurityPatroller interface.
@@ -48,7 +64,7 @@ func New(gitlabService gitlab.IService, slackService slack.IService, gitService 
 }
 
 // Patrol scans the given Gitlab groups and projects, creates and publishes the necessary reports.
-func (s *sheriffService) Patrol(groupPaths []string, projectPaths []string, gitlabIssue bool, slackChannel string, reportProjectSlack bool, silentReport bool, verbose bool) (warn error, err error) {
+func (s *sheriffService) Patrol(patrolArgs PatrolArgs) (warn error, err error) {
 	scanReports, swarn, err := s.scanAndGetReports(groupPaths, projectPaths)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to scan projects"), err)
