@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	"sheriff/internal/patrol"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,64 +17,59 @@ func TestPatrolActionEmptyRun(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestValidatePathGroupPathRegex(t *testing.T) {
+func TestParseURLs(t *testing.T) {
 	testCases := []struct {
-		paths []string
-		want  bool
+		urls           []string
+		validPlatforms []string
+		wantErr        bool
+		wantResult     *[]patrol.GenericUrlElem
 	}{
-		{[]string{"group"}, true},
-		{[]string{"group/subgroup"}, true},
-		{[]string{"group/subgroup", "not a path"}, false},
+		{
+			urls:           []string{"gitlab://gitlab.com/namespace/group"},
+			validPlatforms: sourceCodePlatforms,
+			wantErr:        false,
+			wantResult: &[]patrol.GenericUrlElem{
+				{
+					Platform: "gitlab",
+					Url:      "gitlab.com/namespace/group",
+				},
+			},
+		},
+		{
+			urls:           []string{"gitlab://gitlab.com/namespace/group", "azure://not-supported.com"},
+			validPlatforms: sourceCodePlatforms,
+			wantErr:        true,
+			wantResult:     nil,
+		},
+		{
+			urls:           []string{"slack://channel1", "slack://channel2", "issue://"},
+			validPlatforms: reportToPlatforms,
+			wantErr:        false,
+			wantResult: &[]patrol.GenericUrlElem{
+				{
+					Platform: "slack",
+					Url:      "channel1",
+				},
+				{
+					Platform: "slack",
+					Url:      "channel2",
+				},
+				{
+					Platform: "issue",
+					Url:      "",
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
-		err := validatePaths(groupPathRegex)(nil, tc.paths)
+		result, err := parseURLs(tc.urls)
 
-		if tc.want {
-			assert.Nil(t, err)
-		} else {
+		if tc.wantErr {
 			assert.NotNil(t, err)
-		}
-	}
-}
-
-func TestValidatePathProjectPathRegex(t *testing.T) {
-	testCases := []struct {
-		paths []string
-		want  bool
-	}{
-		{[]string{"project"}, false}, // top-level projects don't exist
-		{[]string{"group/project"}, true},
-		{[]string{"group/project", "not a path"}, false},
-	}
-
-	for _, tc := range testCases {
-		err := validatePaths(projectPathRegex)(nil, tc.paths)
-
-		if tc.want {
-			assert.Nil(t, err, tc.paths)
 		} else {
-			assert.NotNil(t, err, tc.paths)
-		}
-	}
-}
-
-func TestValidateUrl(t *testing.T) {
-
-	testCases := []struct {
-		urls []string
-		want bool
-	}{
-		{[]string{"gitlab://example.com"}, true},
-	}
-
-	for _, tc := range testCases {
-		err := validateURLs(nil, tc.urls)
-
-		if tc.want {
 			assert.Nil(t, err)
-		} else {
-			assert.NotNil(t, err)
+			assert.Equal(t, tc.wantResult, result)
 		}
 	}
 }

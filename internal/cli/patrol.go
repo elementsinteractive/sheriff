@@ -127,12 +127,12 @@ func PatrolAction(cCtx *cli.Context) error {
 	patrolService := patrol.New(gitlabService, slackService, gitService, osvService)
 
 	// Run the scan
-	toScan, err := parseUrls(cCtx.StringSlice(urlFlag))
+	toScan, err := parseURLs(cCtx.StringSlice(urlFlag))
 	if err != nil {
 		return errors.Join(errors.New("failed to parse URLs"), err)
 	}
 
-	toReport, err := parseUrls(cCtx.StringSlice(reportToFlag))
+	toReport, err := parseURLs(cCtx.StringSlice(reportToFlag))
 	if err != nil {
 		return errors.Join(errors.New("failed to parse report URLs"), err)
 	}
@@ -158,7 +158,7 @@ func PatrolAction(cCtx *cli.Context) error {
 func validateURLs(validPrefixes []string) func(_ *cli.Context, urls []string) (err error) {
 	return func(_ *cli.Context, urls []string) (err error) {
 		for _, url := range urls {
-			parts := strings.Split(url, ":")
+			parts := strings.Split(url, "://")
 			if len(parts) != 2 {
 				return fmt.Errorf("invalid url: %v", url)
 			}
@@ -192,13 +192,13 @@ func validateURLs(validPrefixes []string) func(_ *cli.Context, urls []string) (e
 	}
 }
 
-// parseUrls parses the URLs passed as arguments returning a struct that
+// parseURLs parses the URLs passed as arguments returning a struct that
 // separates the platform from the url part.
-func parseUrls(urls []string) ([]patrol.GenericUrlElem, error) {
+func parseURLs(urls []string) ([]patrol.GenericUrlElem, error) {
 	var parsedUrls []patrol.GenericUrlElem
 
 	for _, url := range urls {
-		parts := strings.Split(url, ":")
+		parts := strings.Split(url, "://")
 		if len(parts) != 2 {
 			// This should never happen, as the URL should have been validated before
 			return nil, fmt.Errorf("invalid url: %v", url)

@@ -65,6 +65,7 @@ func New(gitlabService gitlab.IService, slackService slack.IService, gitService 
 
 // Patrol scans the given Gitlab groups and projects, creates and publishes the necessary reports.
 func (s *sheriffService) Patrol(patrolArgs PatrolArgs) (warn error, err error) {
+	// TODO: when we support other source code platforms apart from GitLab, we must separate the URLs per platform
 	scanReports, swarn, err := s.scanAndGetReports(groupPaths, projectPaths)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to scan projects"), err)
