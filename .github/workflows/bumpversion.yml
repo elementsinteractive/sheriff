@@ -11,15 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     name: "Bump version and create changelog with commitizen"
     steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.ELEMENTSINTERACTIVE_BOT_APP_ID }}
+          private-key: ${{ secrets.ELEMENTSINTERACTIVE_BOT_PRIVATE_KEY }}
       - name: Check out
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: "${{ secrets.GITHUB_TOKEN }}"
       - id: cz
         name: Create bump and changelog
         uses: commitizen-tools/commitizen-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
       - name: Print Version
         run: echo "Bumped to version ${{ steps.cz.outputs.version }}"
