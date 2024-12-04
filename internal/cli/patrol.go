@@ -155,7 +155,7 @@ func PatrolAction(cCtx *cli.Context) error {
 	); err != nil {
 		return errors.Join(errors.New("failed to scan"), err)
 	} else if warn != nil {
-		return cli.Exit("The Patrol was partially successful, some errors occurred. Check the logs for more information.", 1)
+		return cli.Exit("Patrol was partially successful, some errors occurred. Check the logs for more information.", 1)
 	}
 
 	return nil
