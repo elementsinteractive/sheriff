@@ -21,20 +21,15 @@ import (
 const tempScanDir = "tmp_scans"
 const projectConfigFileName = "sheriff.toml"
 
-// GenericUrlElem is a struct to store a platform and a URL.
-// The url can represent different things depending on the platform in question:
-// For slack, it may represent a channel; for gitlab, it may represent a project, etc.
-type GenericUrlElem struct {
-	Platform string
-	Url      string
-}
-
 // PatrolArgs is a struct to store the arguments for the main patrol function.
 type PatrolArgs struct {
-	ToScanUrls   []GenericUrlElem
-	ToReportUrls []GenericUrlElem
-	SilentReport bool
-	Verbose      bool
+	GitlabGroupPaths          []string
+	GitlabProjectPaths        []string
+	SlackChannels             []string
+	EnableProjectReportToFlag bool
+	CreateIssueFlag           bool
+	SilentReport              bool
+	Verbose                   bool
 }
 
 // securityPatroller is the interface of the main security scanner service of this tool.
@@ -66,7 +61,7 @@ func New(gitlabService gitlab.IService, slackService slack.IService, gitService 
 // Patrol scans the given Gitlab groups and projects, creates and publishes the necessary reports.
 func (s *sheriffService) Patrol(patrolArgs PatrolArgs) (warn error, err error) {
 	// TODO: when we support other source code platforms apart from GitLab, we must separate the URLs per platform
-	scanReports, swarn, err := s.scanAndGetReports(groupPaths, projectPaths)
+	scanReports, swarn, err := s.scanAndGetReports(patrolArgs.GitlabGroupPaths, patrolArgs.GitlabProjectPaths)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to scan projects"), err)
 	}
@@ -80,7 +75,7 @@ func (s *sheriffService) Patrol(patrolArgs PatrolArgs) (warn error, err error) {
 		return swarn, nil
 	}
 
-	if gitlabIssue {
+	if patrolArgs.CreateIssueFlag {
 		log.Info().Msg("Creating issue in affected projects")
 		if gwarn := publish.PublishAsGitlabIssues(scanReports, s.gitlabService); gwarn != nil {
 			gwarn = errors.Join(errors.New("errors occured when creating issues"), gwarn)
@@ -90,27 +85,30 @@ func (s *sheriffService) Patrol(patrolArgs PatrolArgs) (warn error, err error) {
 	}
 
 	if s.slackService != nil {
-		if slackChannel != "" {
-			log.Info().Str("slackChannel", slackChannel).Msg("Posting report to slack channel")
+		// Global reports
+		for _, slackChannel := range patrolArgs.SlackChannels {
+			// TODO: goroutine (?)
+			if slackChannel != "" {
+				log.Info().Str("slackChannel", slackChannel).Msg("Posting report to slack channel")
 
-			if err := publish.PublishAsGeneralSlackMessage(slackChannel, scanReports, groupPaths, projectPaths, s.slackService); err != nil {
-				log.Error().Err(err).Msg("Failed to post slack report")
-				err = errors.Join(errors.New("failed to post slack report"), err)
-				warn = errors.Join(err, warn)
+				if err := publish.PublishAsGeneralSlackMessage(slackChannel, scanReports, patrolArgs.GitlabGroupPaths, patrolArgs.GitlabProjectPaths, s.slackService); err != nil {
+					log.Error().Err(err).Msg("Failed to post slack report")
+					err = errors.Join(errors.New("failed to post slack report"), err)
+					warn = errors.Join(err, warn)
+				}
 			}
 		}
-
-		if reportProjectSlack {
+		// Specific project reports to slack channels defined in the project configuration
+		if patrolArgs.EnableProjectReportToFlag {
 			log.Info().Msg("Posting report to project slack channel")
 			if swarn := publish.PublishAsSpecificChannelSlackMessage(scanReports, s.slackService); swarn != nil {
 				swarn = errors.Join(errors.New("errors occured when posting to project slack channel"), swarn)
 				warn = errors.Join(swarn, warn)
 			}
-
 		}
 	}
 
-	publish.PublishToConsole(scanReports, silentReport)
+	publish.PublishToConsole(scanReports, patrolArgs.SilentReport)
 
 	return warn, nil
 }

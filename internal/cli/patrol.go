@@ -2,15 +2,11 @@ package cli
 
 import (
 	"errors"
-	"fmt"
-	"regexp"
 	"sheriff/internal/git"
 	"sheriff/internal/gitlab"
 	"sheriff/internal/patrol"
 	"sheriff/internal/scanner"
 	"sheriff/internal/slack"
-	"slices"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -139,10 +135,11 @@ func PatrolAction(cCtx *cli.Context) error {
 
 	if warn, err := patrolService.Patrol(
 		patrol.PatrolArgs{
-			ToScanUrls:   toScan,
-			ToReportUrls: toReport,
-			SilentReport: cCtx.Bool(silentReportFlag),
-			Verbose:      verbose,
+			GitlabGroupPaths:          getPlatformValueFromUrl(toScan, Gitlab),
+			SlackChannels:             getPlatformValueFromUrl(toReport, Slack),
+			EnableProjectReportToFlag: cCtx.Bool(enableProjectReportToFlag),
+			SilentReport:              cCtx.Bool(silentReportFlag),
+			Verbose:                   verbose,
 		},
 	); err != nil {
 		return errors.Join(errors.New("failed to scan"), err)
@@ -151,63 +148,4 @@ func PatrolAction(cCtx *cli.Context) error {
 	}
 
 	return nil
-}
-
-// validateURLs validates the URLs passed as arguments.
-// It ensures that the URL is in the format "platform:path" and that the path matches the regex for the platform.
-func validateURLs(validPrefixes []string) func(_ *cli.Context, urls []string) (err error) {
-	return func(_ *cli.Context, urls []string) (err error) {
-		for _, url := range urls {
-			parts := strings.Split(url, "://")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid url: %v", url)
-			}
-
-			platform := parts[0]
-
-			if !slices.Contains(validPrefixes, platform) {
-				return fmt.Errorf("Unsupported repository service: %v", platform)
-			}
-
-			regex, ok := platformUrlRegex[platform]
-			if !ok {
-				return fmt.Errorf("No regex for platform: %v", platform)
-			}
-
-			// Check the URL
-			rgx, err := regexp.Compile(regex)
-			if err != nil {
-				return err
-			}
-
-			path := parts[1]
-			matched := rgx.Match([]byte(path))
-
-			if !matched {
-				return fmt.Errorf("invalid group path for platform: %v for %v", path, platform)
-			}
-
-		}
-		return
-	}
-}
-
-// parseURLs parses the URLs passed as arguments returning a struct that
-// separates the platform from the url part.
-func parseURLs(urls []string) ([]patrol.GenericUrlElem, error) {
-	var parsedUrls []patrol.GenericUrlElem
-
-	for _, url := range urls {
-		parts := strings.Split(url, "://")
-		if len(parts) != 2 {
-			// This should never happen, as the URL should have been validated before
-			return nil, fmt.Errorf("invalid url: %v", url)
-		}
-		parsedUrls = append(parsedUrls, patrol.GenericUrlElem{
-			Platform: parts[0],
-			Url:      parts[1],
-		})
-	}
-
-	return parsedUrls, nil
 }
