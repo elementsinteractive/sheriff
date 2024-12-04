@@ -23,8 +23,7 @@ const projectConfigFileName = "sheriff.toml"
 
 // PatrolArgs is a struct to store the arguments for the main patrol function.
 type PatrolArgs struct {
-	GitlabGroupPaths          []string
-	GitlabProjectPaths        []string
+	GitlabGroupsOrProjects    []string
 	SlackChannels             []string
 	EnableProjectReportToFlag bool
 	CreateIssueFlag           bool
@@ -222,4 +221,19 @@ func markVulnsAsAcknowledgedInReport(report *scanner.Report, config scanner.Proj
 			}
 		}
 	}
+}
+
+func (s *sheriffService) separateGitlabGroupsFromProjects(groupOrProjects []string) (projects []GitlabProject) {
+	for _, groupOrProject := range groupOrProjects {
+		project, err := GetProject(groupOrProject) // using gitlab's search project API
+		if err {
+			group, err := GetGroup(groupOrProject)           // using gitlab's search groups API
+			groupProjects, err := GetProjectFromGroup(group) // using gitlab's search projects of group API
+			projects.extend(groupProjects)
+		} else {
+			projects.append(project)
+		}
+	}
+
+	return projects
 }

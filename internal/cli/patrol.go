@@ -121,7 +121,7 @@ func PatrolAction(cCtx *cli.Context) error {
 
 	if warn, err := patrolService.Patrol(
 		patrol.PatrolArgs{
-			GitlabGroupPaths:          getPlatformValueFromUrl(toScan, Gitlab),
+			GitlabGroupsOrProjects:    getPlatformValueFromUrl(toScan, Gitlab),
 			SlackChannels:             getPlatformValueFromUrl(toReport, Slack),
 			EnableProjectReportToFlag: cCtx.Bool(enableProjectReportToFlag),
 			SilentReport:              cCtx.Bool(silentReportFlag),
