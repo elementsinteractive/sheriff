@@ -21,21 +21,7 @@ const (
 	Tokens        CommandCategory = "Tokens:"
 	Miscellaneous CommandCategory = "Miscellaneous:"
 	Scanning      CommandCategory = "Scanning (configurable by file):"
-
-	// TODO: Figure out how to use custom types with a generic URL validator/parser
-	Gitlab string = "gitlab"
-	Issue  string = "issue"
-	Slack  string = "slack"
 )
-
-var sourceCodePlatforms = []string{Gitlab}
-var reportToPlatforms = []string{Slack, Issue}
-
-var platformUrlRegex = map[string]string{
-	Gitlab: gitlabPathRegex,
-	Slack:  "^[a-z0-9-]{1}[a-z0-9-]{0,20}$",
-	Issue:  "^$",
-}
 
 const configFlag = "config"
 const verboseFlag = "verbose"
