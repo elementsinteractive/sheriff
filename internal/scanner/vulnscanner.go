@@ -50,8 +50,8 @@ type AcknowledgedVuln struct {
 }
 
 type ProjectConfig struct {
-	SlackChannel string             `toml:"slack-channel"`
-	Acknowledged []AcknowledgedVuln `toml:"acknowledged"`
+	ReportToSlackChannel string             `toml:"report-to-slack-channel"`
+	Acknowledged         []AcknowledgedVuln `toml:"acknowledged"`
 }
 
 // Report is the main report representation of a project vulnerability scan.

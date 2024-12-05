@@ -24,7 +24,7 @@ func TestPublishAsGeneralSlackMessage(t *testing.T) {
 		},
 	}
 
-	err := PublishAsGeneralSlackMessage("channel", report, []string{"path/to/group"}, []string{"path/to/project"}, mockSlackService)
+	err := PublishAsGeneralSlackMessage("channel", report, []string{"path/to/group", "path/to/project"}, mockSlackService)
 
 	assert.Nil(t, err)
 	mockSlackService.AssertExpectations(t)
@@ -40,7 +40,7 @@ func TestPublishAsSpecificChannelSlackMessage(t *testing.T) {
 				Id: "CVE-2021-1234",
 			},
 		},
-		ProjectConfig: scanner.ProjectConfig{SlackChannel: "channel"},
+		ProjectConfig: scanner.ProjectConfig{ReportToSlackChannel: "channel"},
 	}
 
 	_ = PublishAsSpecificChannelSlackMessage([]scanner.Report{report}, mockSlackService)
@@ -70,7 +70,7 @@ func TestFormatSummary(t *testing.T) {
 		},
 	}
 
-	msgOpts := formatSummary(groupVulnReportsByMaxSeverityKind(report), len(report), []string{"path/to/group"}, []string{"path/to/project"})
+	msgOpts := formatSummary(groupVulnReportsByMaxSeverityKind(report), len(report), []string{"path/to/group", "path/to/project"})
 
 	assert.NotNil(t, msgOpts)
 	assert.Len(t, msgOpts, 1)

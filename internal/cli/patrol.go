@@ -3,23 +3,16 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"regexp"
+	"net/url"
 	"sheriff/internal/git"
 	"sheriff/internal/gitlab"
 	"sheriff/internal/patrol"
 	"sheriff/internal/scanner"
 	"sheriff/internal/slack"
 
-	zerolog "github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
-
-// Regexes very loosely defined based on GitLab's reserved names:
-// https://docs.gitlab.com/ee/user/reserved_names.html#limitations-on-usernames-project-and-group-names-and-slugs
-// In reality the regex should be more restrictive about special characters, for now we're just checking for slashes and non-whitespace characters.
-const groupPathRegex = "^\\S+(\\/\\S+)*$"   // Matches paths like "group" or "group/subgroup" ...
-const projectPathRegex = "^\\S+(\\/\\S+)+$" // Matches paths like "group/project" or "group/subgroup/project" ...
 
 type CommandCategory string
 
@@ -32,14 +25,12 @@ const (
 
 const configFlag = "config"
 const verboseFlag = "verbose"
-const testingFlag = "testing"
-const groupsFlag = "gitlab-groups"
-const projectsFlag = "gitlab-projects"
-const reportSlackChannelFlag = "report-slack-channel"
-const reportSlackProjectChannelFlag = "report-slack-project-channel"
-const reportGitlabFlag = "report-gitlab-issue"
-const silentReport = "silent"
-const publicSlackChannelFlag = "public-slack-channel"
+const urlFlag = "url"
+const reportToEmailFlag = "report-to-email"
+const reportToIssueFlag = "report-to-issue"
+const reportToSlackChannel = "report-to-slack-channel"
+const reportEnableProjectReportToFlag = "report-enable-project-report-to"
+const silentReportFlag = "silent"
 const gitlabTokenFlag = "gitlab-token"
 const slackTokenFlag = "slack-token"
 
@@ -47,58 +38,46 @@ var sensitiveFlags = []string{gitlabTokenFlag, slackTokenFlag}
 
 var PatrolFlags = []cli.Flag{
 	&cli.StringFlag{
-		Name:  configFlag,
-		Value: "sheriff.toml",
+		Name:    configFlag,
+		Aliases: []string{"c"},
+		Value:   "sheriff.toml",
 	},
 	&cli.BoolFlag{
 		Name:     verboseFlag,
+		Aliases:  []string{"v"},
 		Usage:    "Enable verbose logging",
 		Category: string(Miscellaneous),
 		Value:    false,
 	},
 	altsrc.NewStringSliceFlag(&cli.StringSliceFlag{
-		Name:     groupsFlag,
-		Usage:    "Gitlab groups to scan for vulnerabilities (list argument which can be repeated)",
+		Name:     urlFlag,
+		Usage:    "Groups and projects to scan for vulnerabilities (list argument which can be repeated)",
 		Category: string(Scanning),
-		Action:   validatePaths(groupPathRegex),
 	}),
 	altsrc.NewStringSliceFlag(&cli.StringSliceFlag{
-		Name:     projectsFlag,
-		Usage:    "Gitlab projects to scan for vulnerabilities (list argument which can be repeated)",
-		Category: string(Scanning),
-		Action:   validatePaths(projectPathRegex),
+		Name:     reportToEmailFlag,
+		Usage:    "Enable reporting to the provided list of emails",
+		Category: string(Reporting),
 	}),
 	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     testingFlag,
-		Usage:    "Enable testing mode. This can enable features that are not safe for production use.",
-		Category: string(Miscellaneous),
-		Value:    false,
+		Name:     reportToIssueFlag,
+		Usage:    "Enable or disable reporting to the project's issue on the associated platform (gitlab, github, ...)",
+		Category: string(Reporting),
 	}),
 	altsrc.NewStringFlag(&cli.StringFlag{
-		Name:     reportSlackChannelFlag,
-		Usage:    "Enable reporting to Slack through messages in the specified channel.",
+		Name:     reportToSlackChannel,
+		Usage:    "Enable reporting to the provided slack channel",
 		Category: string(Reporting),
 	}),
 	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     reportSlackProjectChannelFlag,
-		Usage:    "Enable reporting to Slack through messages in the specified project's channel. Requires a project-level configuration file specifying the channel.",
+		Name:     reportEnableProjectReportToFlag,
+		Usage:    "Enable project-level configuration for '--report-to-*'.",
 		Category: string(Reporting),
+		Value:    true,
 	}),
 	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     reportGitlabFlag,
-		Usage:    "Enable reporting to GitLab through issue creation in projects affected by vulnerabilities.",
-		Category: string(Reporting),
-		Value:    false,
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     silentReport,
+		Name:     silentReportFlag,
 		Usage:    "Disable report output to stdout.",
-		Category: string(Reporting),
-		Value:    false,
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
-		Name:     publicSlackChannelFlag,
-		Usage:    "Allow the slack report to be posted to a public channel. Note that reports may contain sensitive information which should not be disclosed on a public channel, for this reason this flag will only be enabled when combined with the testing flag.",
 		Category: string(Reporting),
 		Value:    false,
 	}),
@@ -121,10 +100,10 @@ var PatrolFlags = []cli.Flag{
 func PatrolAction(cCtx *cli.Context) error {
 	verbose := cCtx.Bool(verboseFlag)
 
-	var publicChannelsEnabled bool
-	if cCtx.Bool(testingFlag) {
-		zerolog.Warn().Msg("Testing mode enabled. This may enable features that are not safe for production use.")
-		publicChannelsEnabled = cCtx.Bool(publicSlackChannelFlag)
+	// Parse options
+	locations, err := parseUrls(cCtx.StringSlice(urlFlag))
+	if err != nil {
+		return errors.Join(errors.New("failed to parse `--url` options"), err)
 	}
 
 	// Create services
@@ -133,7 +112,7 @@ func PatrolAction(cCtx *cli.Context) error {
 		return errors.Join(errors.New("failed to create GitLab service"), err)
 	}
 
-	slackService, err := slack.New(cCtx.String(slackTokenFlag), publicChannelsEnabled, verbose)
+	slackService, err := slack.New(cCtx.String(slackTokenFlag), verbose)
 	if err != nil {
 		return errors.Join(errors.New("failed to create Slack service"), err)
 	}
@@ -145,13 +124,15 @@ func PatrolAction(cCtx *cli.Context) error {
 
 	// Do the patrol
 	if warn, err := patrolService.Patrol(
-		cCtx.StringSlice(groupsFlag),
-		cCtx.StringSlice(projectsFlag),
-		cCtx.Bool(reportGitlabFlag),
-		cCtx.String(reportSlackChannelFlag),
-		cCtx.Bool(reportSlackProjectChannelFlag),
-		cCtx.Bool(silentReport),
-		verbose,
+		patrol.PatrolArgs{
+			Locations:             locations,
+			ReportToIssue:         cCtx.Bool(reportToIssueFlag),
+			ReportToEmails:        cCtx.StringSlice(reportToEmailFlag),
+			ReportToSlackChannel:  cCtx.String(reportToSlackChannel),
+			EnableProjectReportTo: cCtx.Bool(reportEnableProjectReportToFlag),
+			SilentReport:          cCtx.Bool(silentReportFlag),
+			Verbose:               verbose,
+		},
 	); err != nil {
 		return errors.Join(errors.New("failed to scan"), err)
 	} else if warn != nil {
@@ -161,20 +142,34 @@ func PatrolAction(cCtx *cli.Context) error {
 	return nil
 }
 
-func validatePaths(regex string) func(*cli.Context, []string) error {
-	return func(_ *cli.Context, groups []string) (err error) {
-		rgx, err := regexp.Compile(regex)
+func parseUrls(uris []string) ([]patrol.ProjectLocation, error) {
+	locations := make([]patrol.ProjectLocation, len(uris))
+	for i, uri := range uris {
+		parsed, err := url.Parse(uri)
+		if err != nil || parsed == nil {
+			return nil, errors.Join(fmt.Errorf("failed to parse uri"), err)
+		}
+
+		if !parsed.IsAbs() {
+			return nil, fmt.Errorf("url missing platform scheme %v", uri)
+		}
+
+		if parsed.Scheme == string(patrol.Github) {
+			return nil, fmt.Errorf("github is currently unsupported, but is on our roadmap 😃") // TODO #9
+		} else if parsed.Scheme != string(patrol.Gitlab) {
+			return nil, fmt.Errorf("unsupported platform %v", parsed.Scheme)
+		}
+
+		path, err := url.JoinPath(parsed.Host, parsed.Path)
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("failed to join host and path %v", uri)
 		}
 
-		for _, path := range groups {
-			matched := rgx.Match([]byte(path))
-
-			if !matched {
-				return fmt.Errorf("invalid group path: %v", path)
-			}
+		locations[i] = patrol.ProjectLocation{
+			Type: patrol.PlatformType(parsed.Scheme),
+			Path: path,
 		}
-		return
 	}
+
+	return locations, nil
 }

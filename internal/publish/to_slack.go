@@ -16,10 +16,10 @@ import (
 )
 
 // PublishAsGeneralSlackMessage publishes a report of the vulnerabilities scanned to a slack channel
-func PublishAsGeneralSlackMessage(channelName string, reports []scanner.Report, groups []string, projects []string, s slack.IService) (err error) {
+func PublishAsGeneralSlackMessage(channelName string, reports []scanner.Report, paths []string, s slack.IService) (err error) {
 	vulnerableReportsBySeverityKind := groupVulnReportsByMaxSeverityKind(reports)
 
-	summary := formatSummary(vulnerableReportsBySeverityKind, len(reports), groups, projects)
+	summary := formatSummary(vulnerableReportsBySeverityKind, len(reports), paths)
 
 	ts, err := s.PostMessage(channelName, summary...)
 	if err != nil {
@@ -42,7 +42,7 @@ func PublishAsGeneralSlackMessage(channelName string, reports []scanner.Report, 
 }
 
 func PublishAsSpecificChannelSlackMessage(reports []scanner.Report, s slack.IService) (warn error) {
-	configuredReports := pie.Filter(reports, func(r scanner.Report) bool { return r.ProjectConfig.SlackChannel != "" })
+	configuredReports := pie.Filter(reports, func(r scanner.Report) bool { return r.ProjectConfig.ReportToSlackChannel != "" })
 
 	var wg sync.WaitGroup
 	for _, report := range configuredReports {
@@ -52,10 +52,10 @@ func PublishAsSpecificChannelSlackMessage(reports []scanner.Report, s slack.ISer
 			defer wg.Done()
 			message := formatSpecificChannelSlackMessage(report)
 
-			_, err := s.PostMessage(report.ProjectConfig.SlackChannel, message...)
+			_, err := s.PostMessage(report.ProjectConfig.ReportToSlackChannel, message...)
 			if err != nil {
-				log.Error().Err(err).Str("channel", report.ProjectConfig.SlackChannel).Msg("Failed to post slack report")
-				err = fmt.Errorf("failed to post slack report to channel %v", report.ProjectConfig.SlackChannel)
+				log.Error().Err(err).Str("channel", report.ProjectConfig.ReportToSlackChannel).Msg("Failed to post slack report")
+				err = fmt.Errorf("failed to post slack report to channel %v", report.ProjectConfig.ReportToSlackChannel)
 				warn = errors.Join(err, warn)
 			}
 		}()
@@ -132,7 +132,7 @@ func formatSubtitleList(entity string, list []string) *goslack.ContextBlock {
 }
 
 // formatSummary creates a message block with a summary of the reports
-func formatSummary(reportsBySeverityKind map[scanner.SeverityScoreKind][]scanner.Report, totalReports int, groups []string, projects []string) []goslack.MsgOption {
+func formatSummary(reportsBySeverityKind map[scanner.SeverityScoreKind][]scanner.Report, totalReports int, paths []string) []goslack.MsgOption {
 	title := goslack.NewHeaderBlock(
 		goslack.NewTextBlockObject(
 			"plain_text",
@@ -140,8 +140,7 @@ func formatSummary(reportsBySeverityKind map[scanner.SeverityScoreKind][]scanner
 			true, false,
 		),
 	)
-	subtitleGroups := formatSubtitleList("groups", groups)
-	subtitleProjects := formatSubtitleList("specific projects", projects)
+	subtitleGroups := formatSubtitleList("urls", paths)
 	subtitleCount := goslack.NewContextBlock("subtitleCount", goslack.NewTextBlockObject("mrkdwn", fmt.Sprintf("Total projects scanned: %v", totalReports), false, false))
 
 	counts := pie.Map(severityScoreOrder, func(kind scanner.SeverityScoreKind) *goslack.TextBlockObject {
@@ -161,7 +160,6 @@ func formatSummary(reportsBySeverityKind map[scanner.SeverityScoreKind][]scanner
 	blocks := []goslack.Block{
 		title,
 		subtitleGroups,
-		subtitleProjects,
 		subtitleCount,
 		countsTitle,
 		countsBlock,

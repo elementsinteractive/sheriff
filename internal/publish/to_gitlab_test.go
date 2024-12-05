@@ -206,8 +206,8 @@ type mockGitlabService struct {
 	mock.Mock
 }
 
-func (c *mockGitlabService) GetProjectList(groupPaths []string, projectPaths []string) ([]gitlab.Project, error) {
-	args := c.Called(groupPaths, projectPaths)
+func (c *mockGitlabService) GetProjectList(paths []string) ([]gitlab.Project, error) {
+	args := c.Called(paths)
 	return args.Get(0).([]gitlab.Project), args.Error(1)
 }
 

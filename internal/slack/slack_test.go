@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewService(t *testing.T) {
-	s, err := New("token", false, false)
+	s, err := New("token", false)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
@@ -35,7 +35,7 @@ func TestPostMessage(t *testing.T) {
 	)
 	mockClient.On("PostMessage", channelID, mock.Anything).Return("", "", nil)
 
-	svc := service{&mockClient, false}
+	svc := service{&mockClient}
 
 	_, err := svc.PostMessage(channelName, message)
 
@@ -47,43 +47,33 @@ func TestFindSlackChannel(t *testing.T) {
 	channelID := "1234"
 	channelName := "random channel"
 
-	testCases := []struct {
-		isPublicChannelsEnabled bool
-		want                    []string
-	}{
-		{true, []string{"private_channel", "public_channel"}},
-		{false, []string{"private_channel"}},
-	}
-
-	for _, tc := range testCases {
-		mockClient := mockClient{}
-		mockClient.On("GetConversations", &slack.GetConversationsParameters{
-			ExcludeArchived: true,
-			Cursor:          "",
-			Types:           tc.want,
-			Limit:           1000,
-		}).Return(
-			[]slack.Channel{
-				{
-					GroupConversation: slack.GroupConversation{
-						Conversation: slack.Conversation{ID: channelID},
-						Name:         channelName,
-					},
+	mockClient := mockClient{}
+	mockClient.On("GetConversations", &slack.GetConversationsParameters{
+		ExcludeArchived: true,
+		Cursor:          "",
+		Types:           []string{"private_channel", "public_channel"},
+		Limit:           1000,
+	}).Return(
+		[]slack.Channel{
+			{
+				GroupConversation: slack.GroupConversation{
+					Conversation: slack.Conversation{ID: channelID},
+					Name:         channelName,
 				},
 			},
-			"",
-			nil,
-		)
+		},
+		"",
+		nil,
+	)
 
-		svc := service{&mockClient, tc.isPublicChannelsEnabled}
+	svc := service{&mockClient}
 
-		channel, err := svc.findSlackChannel(channelName)
+	channel, err := svc.findSlackChannel(channelName)
 
-		assert.Nil(t, err)
-		assert.NotNil(t, channel)
-		assert.Equal(t, channelID, channel.ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, channel)
+	assert.Equal(t, channelID, channel.ID)
 
-	}
 }
 
 type mockClient struct {

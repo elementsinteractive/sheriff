@@ -107,10 +107,9 @@ Only the **Reporting** and **Scanning** sections of configuration parameters are
 In this case you may choose to create a config file such as the following:
 
 ```toml
-gitlab-groups = ["namespace/group", "namespace/group/cool-repo"]
-gitlab-projects = ["namespace/group/cool-repo"]
-report-slack-channel = "sheriff-report-test"
-report-gitlab-issue = true
+url = ["namespace/group", "namespace/group/cool-repo"]
+report-to-slack-channel = "sheriff-report-test"
+report-to-gitlab-issue = true
 ```
 
 And if you wish to specify a different file, you can do so with `sheriff patrol --config your-config-file.toml`.

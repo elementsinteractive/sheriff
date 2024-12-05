@@ -14,6 +14,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/elliotchance/pie/v2"
 	"github.com/rs/zerolog/log"
 	gogitlab "github.com/xanzy/go-gitlab"
 )
@@ -21,10 +22,33 @@ import (
 const tempScanDir = "tmp_scans"
 const projectConfigFileName = "sheriff.toml"
 
+type PlatformType string
+
+const (
+	Gitlab PlatformType = "gitlab"
+	Github PlatformType = "github"
+)
+
+type ProjectLocation struct {
+	Type PlatformType
+	Path string
+}
+
+// PatrolArgs is a struct to store the arguments for the main patrol function.
+type PatrolArgs struct {
+	Locations             []ProjectLocation
+	ReportToEmails        []string
+	ReportToSlackChannel  string
+	ReportToIssue         bool
+	EnableProjectReportTo bool
+	SilentReport          bool
+	Verbose               bool
+}
+
 // securityPatroller is the interface of the main security scanner service of this tool.
 type securityPatroller interface {
 	// Scans the given Gitlab groups and projects, creates and publishes the necessary reports
-	Patrol(grouiPaths []string, projectPaths []string, gitlabIssue bool, slackChannel string, reportProjectSlack bool, silentReport bool, verbose bool) (warn error, err error)
+	Patrol(args PatrolArgs) (warn error, err error)
 }
 
 // sheriffService is the implementation of the SecurityPatroller interface.
@@ -48,8 +72,8 @@ func New(gitlabService gitlab.IService, slackService slack.IService, gitService 
 }
 
 // Patrol scans the given Gitlab groups and projects, creates and publishes the necessary reports.
-func (s *sheriffService) Patrol(groupPaths []string, projectPaths []string, gitlabIssue bool, slackChannel string, reportProjectSlack bool, silentReport bool, verbose bool) (warn error, err error) {
-	scanReports, swarn, err := s.scanAndGetReports(groupPaths, projectPaths)
+func (s *sheriffService) Patrol(args PatrolArgs) (warn error, err error) {
+	scanReports, swarn, err := s.scanAndGetReports(args.Locations)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to scan projects"), err)
 	}
@@ -63,7 +87,7 @@ func (s *sheriffService) Patrol(groupPaths []string, projectPaths []string, gitl
 		return swarn, nil
 	}
 
-	if gitlabIssue {
+	if args.ReportToIssue {
 		log.Info().Msg("Creating issue in affected projects")
 		if gwarn := publish.PublishAsGitlabIssues(scanReports, s.gitlabService); gwarn != nil {
 			gwarn = errors.Join(errors.New("errors occured when creating issues"), gwarn)
@@ -73,17 +97,18 @@ func (s *sheriffService) Patrol(groupPaths []string, projectPaths []string, gitl
 	}
 
 	if s.slackService != nil {
-		if slackChannel != "" {
-			log.Info().Str("slackChannel", slackChannel).Msg("Posting report to slack channel")
+		if args.ReportToSlackChannel != "" {
+			log.Info().Str("slackChannel", args.ReportToSlackChannel).Msg("Posting report to slack channel")
 
-			if err := publish.PublishAsGeneralSlackMessage(slackChannel, scanReports, groupPaths, projectPaths, s.slackService); err != nil {
+			paths := pie.Map(args.Locations, func(v ProjectLocation) string { return v.Path })
+			if err := publish.PublishAsGeneralSlackMessage(args.ReportToSlackChannel, scanReports, paths, s.slackService); err != nil {
 				log.Error().Err(err).Msg("Failed to post slack report")
 				err = errors.Join(errors.New("failed to post slack report"), err)
 				warn = errors.Join(err, warn)
 			}
 		}
 
-		if reportProjectSlack {
+		if args.EnableProjectReportTo {
 			log.Info().Msg("Posting report to project slack channel")
 			if swarn := publish.PublishAsSpecificChannelSlackMessage(scanReports, s.slackService); swarn != nil {
 				swarn = errors.Join(errors.New("errors occured when posting to project slack channel"), swarn)
@@ -93,12 +118,12 @@ func (s *sheriffService) Patrol(groupPaths []string, projectPaths []string, gitl
 		}
 	}
 
-	publish.PublishToConsole(scanReports, silentReport)
+	publish.PublishToConsole(scanReports, args.SilentReport)
 
 	return warn, nil
 }
 
-func (s *sheriffService) scanAndGetReports(groupPaths []string, projectPaths []string) (reports []scanner.Report, warn error, err error) {
+func (s *sheriffService) scanAndGetReports(locations []ProjectLocation) (reports []scanner.Report, warn error, err error) {
 	// Create a temporary directory to store the scans
 	err = os.MkdirAll(tempScanDir, os.ModePerm)
 	if err != nil {
@@ -106,9 +131,14 @@ func (s *sheriffService) scanAndGetReports(groupPaths []string, projectPaths []s
 	}
 	defer os.RemoveAll(tempScanDir)
 	log.Info().Str("path", tempScanDir).Msg("Created temporary directory")
-	log.Info().Strs("groups", groupPaths).Strs("projects", projectPaths).Msg("Getting the list of projects to scan")
 
-	projects, pwarn := s.gitlabService.GetProjectList(groupPaths, projectPaths)
+	gitlabLocs := pie.Map(
+		pie.Filter(locations, func(v ProjectLocation) bool { return v.Type == Gitlab }),
+		func(v ProjectLocation) string { return v.Path },
+	)
+	log.Info().Strs("locations", gitlabLocs).Msg("Getting the list of projects to scan")
+
+	projects, pwarn := s.gitlabService.GetProjectList(gitlabLocs)
 	if pwarn != nil {
 		pwarn = errors.Join(errors.New("errors occured when getting project list"), pwarn)
 		warn = errors.Join(pwarn, warn)

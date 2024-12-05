@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,12 +18,11 @@ func TestNewService(t *testing.T) {
 
 func TestGetProjectListWithTopLevelGroup(t *testing.T) {
 	mockClient := mockClient{}
-	mockClient.On("ListGroups", mock.Anything, mock.Anything).Return([]*gitlab.Group{{ID: 1, FullPath: "group"}}, nil, nil)
-	mockClient.On("ListGroupProjects", 1, mock.Anything, mock.Anything).Return([]*gitlab.Project{{Name: "Hello World"}}, &gitlab.Response{}, nil)
+	mockClient.On("ListGroupProjects", "group", mock.Anything, mock.Anything).Return([]*gitlab.Project{{Name: "Hello World"}}, &gitlab.Response{}, nil)
 
 	svc := service{&mockClient}
 
-	projects, err := svc.GetProjectList([]string{"group"}, []string{})
+	projects, err := svc.GetProjectList([]string{"group"})
 
 	assert.Nil(t, err)
 	assert.NotEmpty(t, projects)
@@ -32,12 +32,11 @@ func TestGetProjectListWithTopLevelGroup(t *testing.T) {
 
 func TestGetProjectListWithSubGroup(t *testing.T) {
 	mockClient := mockClient{}
-	mockClient.On("ListGroups", mock.Anything, mock.Anything).Return([]*gitlab.Group{{ID: 1, FullPath: "group/subgroup"}}, nil, nil)
-	mockClient.On("ListGroupProjects", 1, mock.Anything, mock.Anything).Return([]*gitlab.Project{{Name: "Hello World"}}, &gitlab.Response{}, nil)
+	mockClient.On("ListGroupProjects", "group/subgroup", mock.Anything, mock.Anything).Return([]*gitlab.Project{{Name: "Hello World"}}, &gitlab.Response{}, nil)
 
 	svc := service{&mockClient}
 
-	projects, err := svc.GetProjectList([]string{"group/subgroup"}, []string{})
+	projects, err := svc.GetProjectList([]string{"group/subgroup"})
 
 	assert.Nil(t, err)
 	assert.NotEmpty(t, projects)
@@ -47,12 +46,12 @@ func TestGetProjectListWithSubGroup(t *testing.T) {
 
 func TestGetProjectListWithProjects(t *testing.T) {
 	mockClient := mockClient{}
-	mockClient.On("ListGroups", mock.Anything, mock.Anything).Return([]*gitlab.Group{{ID: 1, FullPath: "group/subgroup"}}, nil, nil)
-	mockClient.On("ListGroupProjects", 1, mock.Anything, mock.Anything).Return([]*gitlab.Project{{Name: "Hello World", PathWithNamespace: "group/subgroup/project"}}, &gitlab.Response{}, nil)
+	mockClient.On("ListGroupProjects", "group/subgroup/project", mock.Anything, mock.Anything).Return([]*gitlab.Project{}, &gitlab.Response{}, errors.New("no group"))
+	mockClient.On("GetProject", "group/subgroup/project", mock.Anything, mock.Anything).Return(&gitlab.Project{Name: "Hello World", PathWithNamespace: "group/subgroup/project"}, &gitlab.Response{}, nil)
 
 	svc := service{&mockClient}
 
-	projects, err := svc.GetProjectList([]string{}, []string{"group/subgroup/project"})
+	projects, err := svc.GetProjectList([]string{"group/subgroup/project"})
 
 	assert.Nil(t, err)
 	assert.NotEmpty(t, projects)
@@ -63,18 +62,16 @@ func TestGetProjectListWithProjects(t *testing.T) {
 func TestGetProjectListWithGroupAndProjects(t *testing.T) {
 	project1 := &gitlab.Project{ID: 1, PathWithNamespace: "group/subgroup/project"}
 	project2 := &gitlab.Project{ID: 2, PathWithNamespace: "group/project"}
-	group1 := &gitlab.Group{ID: 1, FullPath: "group"}
-	group2 := &gitlab.Group{ID: 2, FullPath: "group/subgroup"}
 
 	mockClient := mockClient{}
-	mockClient.On("ListGroups", &gitlab.ListGroupsOptions{Search: gitlab.Ptr("group")}, mock.Anything).Return([]*gitlab.Group{group1}, nil, nil)
-	mockClient.On("ListGroups", &gitlab.ListGroupsOptions{Search: gitlab.Ptr("group/subgroup")}, mock.Anything).Return([]*gitlab.Group{group2}, nil, nil)
-	mockClient.On("ListGroupProjects", 1, mock.Anything, mock.Anything).Return([]*gitlab.Project{project1, project2}, &gitlab.Response{}, nil)
-	mockClient.On("ListGroupProjects", 2, mock.Anything, mock.Anything).Return([]*gitlab.Project{project1}, &gitlab.Response{}, nil)
+	mockClient.On("ListGroupProjects", "group", mock.Anything, mock.Anything).Return([]*gitlab.Project{project1, project2}, &gitlab.Response{}, nil)
+	mockClient.On("ListGroupProjects", "group/subgroup", mock.Anything, mock.Anything).Return([]*gitlab.Project{project1}, &gitlab.Response{}, nil)
+	mockClient.On("ListGroupProjects", project1.PathWithNamespace, mock.Anything, mock.Anything).Return([]*gitlab.Project{}, &gitlab.Response{}, errors.New("no group"))
+	mockClient.On("GetProject", project1.PathWithNamespace, mock.Anything, mock.Anything).Return(project1, &gitlab.Response{}, nil)
 
 	svc := service{&mockClient}
 
-	projects, err := svc.GetProjectList([]string{group1.FullPath}, []string{project1.PathWithNamespace})
+	projects, err := svc.GetProjectList([]string{"group", "group/subgroup", project1.PathWithNamespace})
 
 	assert.Nil(t, err)
 	assert.NotEmpty(t, projects)
@@ -85,13 +82,11 @@ func TestGetProjectListWithGroupAndProjects(t *testing.T) {
 }
 
 func TestGetProjectListWithNextPage(t *testing.T) {
-	group := &gitlab.Group{ID: 1, FullPath: "group/subgroup"}
 	project1 := &gitlab.Project{ID: 1}
 	project2 := &gitlab.Project{ID: 2}
 
 	mockClient := mockClient{}
-	mockClient.On("ListGroups", mock.Anything, mock.Anything).Return([]*gitlab.Group{group}, nil, nil)
-	mockClient.On("ListGroupProjects", mock.Anything, &gitlab.ListGroupProjectsOptions{
+	mockClient.On("ListGroupProjects", "group/subgroup", &gitlab.ListGroupProjectsOptions{
 		Archived:         gitlab.Ptr(false),
 		Simple:           gitlab.Ptr(true),
 		IncludeSubGroups: gitlab.Ptr(true),
@@ -100,7 +95,7 @@ func TestGetProjectListWithNextPage(t *testing.T) {
 			Page: 1,
 		},
 	}, mock.Anything).Return([]*gitlab.Project{project1}, &gitlab.Response{NextPage: 2, TotalPages: 2}, nil)
-	mockClient.On("ListGroupProjects", mock.Anything, &gitlab.ListGroupProjectsOptions{
+	mockClient.On("ListGroupProjects", "group/subgroup", &gitlab.ListGroupProjectsOptions{
 		Archived:         gitlab.Ptr(false),
 		Simple:           gitlab.Ptr(true),
 		IncludeSubGroups: gitlab.Ptr(true),
@@ -112,7 +107,7 @@ func TestGetProjectListWithNextPage(t *testing.T) {
 
 	svc := service{&mockClient}
 
-	projects, err := svc.GetProjectList([]string{group.FullPath}, []string{})
+	projects, err := svc.GetProjectList([]string{"group/subgroup"})
 
 	assert.Nil(t, err)
 	assert.Len(t, projects, 2)
@@ -208,17 +203,17 @@ type mockClient struct {
 	mock.Mock
 }
 
-func (c *mockClient) ListGroups(opt *gitlab.ListGroupsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Group, *gitlab.Response, error) {
-	args := c.Called(opt, options)
+func (c *mockClient) GetProject(pid interface{}, opt *gitlab.GetProjectOptions, options ...gitlab.RequestOptionFunc) (*gitlab.Project, *gitlab.Response, error) {
+	args := c.Called(pid, opt, options)
 	var r *gitlab.Response
 	if resp := args.Get(1); resp != nil {
 		r = args.Get(1).(*gitlab.Response)
 	}
-	return args.Get(0).([]*gitlab.Group), r, args.Error(2)
+	return args.Get(0).(*gitlab.Project), r, args.Error(2)
 }
 
-func (c *mockClient) ListGroupProjects(groupId int, opt *gitlab.ListGroupProjectsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Project, *gitlab.Response, error) {
-	args := c.Called(groupId, opt, options)
+func (c *mockClient) ListGroupProjects(gid interface{}, opt *gitlab.ListGroupProjectsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Project, *gitlab.Response, error) {
+	args := c.Called(gid, opt, options)
 	var r *gitlab.Response
 	if resp := args.Get(1); resp != nil {
 		r = args.Get(1).(*gitlab.Response)

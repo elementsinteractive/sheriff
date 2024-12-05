@@ -2,6 +2,8 @@ package cli
 
 import (
 	"flag"
+	"fmt"
+	"sheriff/internal/patrol"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,44 +18,31 @@ func TestPatrolActionEmptyRun(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestValidatePathGroupPathRegex(t *testing.T) {
+func TestParseUrls(t *testing.T) {
 	testCases := []struct {
-		paths []string
-		want  bool
+		paths               []string
+		wantProjectLocation *patrol.ProjectLocation
+		wantError           bool
 	}{
-		{[]string{"group"}, true},
-		{[]string{"group/subgroup"}, true},
-		{[]string{"group/subgroup", "not a path"}, false},
+		{[]string{"gitlab://namespace/project"}, &patrol.ProjectLocation{Type: "gitlab", Path: "namespace/project"}, false},
+		{[]string{"gitlab://namespace/subgroup/project"}, &patrol.ProjectLocation{Type: "gitlab", Path: "namespace/subgroup/project"}, false},
+		{[]string{"gitlab://namespace"}, &patrol.ProjectLocation{Type: "gitlab", Path: "namespace"}, false},
+		{[]string{"github://organization"}, &patrol.ProjectLocation{Type: "github", Path: "organization"}, true},
+		{[]string{"github://organization/project"}, &patrol.ProjectLocation{Type: "github", Path: "organization/project"}, true},
+		{[]string{"unknown://namespace/project"}, nil, true},
+		{[]string{"unknown://not a path"}, nil, true},
+		{[]string{"not a url"}, nil, true},
 	}
 
 	for _, tc := range testCases {
-		err := validatePaths(groupPathRegex)(nil, tc.paths)
+		urls, err := parseUrls(tc.paths)
 
-		if tc.want {
-			assert.Nil(t, err)
-		} else {
+		fmt.Print(urls)
+
+		if tc.wantError {
 			assert.NotNil(t, err)
-		}
-	}
-}
-
-func TestValidatePathProjectPathRegex(t *testing.T) {
-	testCases := []struct {
-		paths []string
-		want  bool
-	}{
-		{[]string{"project"}, false}, // top-level projects don't exist
-		{[]string{"group/project"}, true},
-		{[]string{"group/project", "not a path"}, false},
-	}
-
-	for _, tc := range testCases {
-		err := validatePaths(projectPathRegex)(nil, tc.paths)
-
-		if tc.want {
-			assert.Nil(t, err, tc.paths)
 		} else {
-			assert.NotNil(t, err, tc.paths)
+			assert.Equal(t, tc.wantProjectLocation, &(urls[0]))
 		}
 	}
 }
