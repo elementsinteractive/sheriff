@@ -12,14 +12,14 @@ import (
 	gogitlab "github.com/xanzy/go-gitlab"
 )
 
-const osvTimeout = 30 * time.Second
-
 type osvReferenceKind string
 
 const (
-	AdvisoryKind osvReferenceKind = "ADVISORY"
-	WebKind      osvReferenceKind = "WEB"
-	PackageKind  osvReferenceKind = "PACKAGE"
+	OsvCommandName                  = "osv-scanner"
+	AdvisoryKind   osvReferenceKind = "ADVISORY"
+	WebKind        osvReferenceKind = "WEB"
+	PackageKind    osvReferenceKind = "PACKAGE"
+	osvTimeout                      = 30 * time.Second
 )
 
 type osvSource struct {
@@ -109,7 +109,7 @@ func (s *osvScanner) Scan(dir string) (*OsvReport, error) {
 
 	cmdOut, err := shell.ShellCommandRunner.Run(
 		shell.CommandInput{
-			Name:    "osv-scanner",
+			Name:    OsvCommandName,
 			Args:    []string{"-r", "--verbosity", "error", "--format", "json", dir},
 			Timeout: osvTimeout,
 		},

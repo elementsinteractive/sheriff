@@ -28,7 +28,7 @@ Sheriff is a tool to scan repositories and generate security reports.
 ## Quick Usage
 
 ```sh
-sheriff patrol --gitlab-groups your-namespace-or-group --report-gitlab-issue
+sheriff patrol --url gitlab://your-namespace-or-group --report-to-issue
 ```
 
 ## How it works

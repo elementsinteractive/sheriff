@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os/exec"
 	"sheriff/internal/git"
 	"sheriff/internal/gitlab"
 	"sheriff/internal/patrol"
 	"sheriff/internal/scanner"
 	"sheriff/internal/slack"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -35,6 +37,7 @@ const gitlabTokenFlag = "gitlab-token"
 const slackTokenFlag = "slack-token"
 
 var sensitiveFlags = []string{gitlabTokenFlag, slackTokenFlag}
+var necessaryScanners = []string{scanner.OsvCommandName}
 
 var PatrolFlags = []cli.Flag{
 	&cli.StringFlag{
@@ -122,6 +125,12 @@ func PatrolAction(cCtx *cli.Context) error {
 
 	patrolService := patrol.New(gitlabService, slackService, gitService, osvService)
 
+	// Check whether the necessary scanners are available
+	missingScanners := getMissingScanners(necessaryScanners)
+	if len(missingScanners) > 0 {
+		return fmt.Errorf("Cannot find all necessary scanners in $PATH, missing: %v", strings.Join(missingScanners, ", "))
+	}
+
 	// Do the patrol
 	if warn, err := patrolService.Patrol(
 		patrol.PatrolArgs{
@@ -172,4 +181,15 @@ func parseUrls(uris []string) ([]patrol.ProjectLocation, error) {
 	}
 
 	return locations, nil
+}
+
+func getMissingScanners(necessary []string) []string {
+	missingScanners := make([]string, 0, len(necessary))
+	for _, scanner := range necessary {
+		if _, err := exec.LookPath(scanner); err != nil {
+			missingScanners = append(missingScanners, scanner)
+		}
+	}
+
+	return missingScanners
 }
