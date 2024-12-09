@@ -28,5 +28,9 @@ func getConfiguration(filename string) (config scanner.ProjectConfig, found bool
 		log.Warn().Strs("keys", keys).Msg("Found undecoded keys in project configuration")
 	}
 
+	if config.SlackChannel != "" {
+		config.ReportToSlackChannel = config.SlackChannel
+	}
+
 	return config, true, nil
 }

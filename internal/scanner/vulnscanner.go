@@ -51,6 +51,7 @@ type AcknowledgedVuln struct {
 
 type ProjectConfig struct {
 	ReportToSlackChannel string             `toml:"report-to-slack-channel"`
+	SlackChannel         string             `toml:"slack-channel"` // TODO #27: Break in v1.0. Kept for backwards-compatibility
 	Acknowledged         []AcknowledgedVuln `toml:"acknowledged"`
 }
 
