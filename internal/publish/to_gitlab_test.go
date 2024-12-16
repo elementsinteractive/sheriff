@@ -196,7 +196,7 @@ func TestGitlabIssueReportHeader(t *testing.T) {
 
 	got := getVulnReportHeader()
 
-	want := `ℹ️ This issue lists all the vulnerabilities found in the project by [Sheriff](https://gitlab.com/namespace/sheriff) on 2021-01-01.`
+	want := `ℹ️ This issue lists all the vulnerabilities found in the project by [Sheriff](https://github.com/elementsinteractive/sheriff) on 2021-01-01.`
 
 	assert.Contains(t, got, want)
 

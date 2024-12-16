@@ -146,9 +146,9 @@ func getVulnReportHeader() string {
 	currentTime := now().Local()
 
 	return fmt.Sprintf(`
-ℹ️ This issue lists all the vulnerabilities found in the project by [Sheriff](https://gitlab.com/namespace/sheriff) on %s.
+ℹ️ This issue lists all the vulnerabilities found in the project by [Sheriff](https://github.com/elementsinteractive/sheriff) on %s.
 
-Please review the vulnerabilities and take the necessary actions to fix or acknowledge them, see the [sheriff documentation](https://security-scanner-c26e93.gitlab.io/user-guide/) for more information.`,
+Please review the vulnerabilities and take the necessary actions to fix or acknowledge them, see the [sheriff documentation](https://github.com/elementsinteractive/sheriff) for more information.`,
 		currentTime.Format("2006-01-02"),
 	)
 }
