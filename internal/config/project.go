@@ -3,16 +3,26 @@ package config
 import (
 	"errors"
 	"os"
-	"sheriff/internal/scanner"
 
 	"github.com/BurntSushi/toml"
 	"github.com/elliotchance/pie/v2"
 	"github.com/rs/zerolog/log"
 )
 
-func GetConfiguration(filename string) (config scanner.ProjectConfig, found bool, err error) {
+type AcknowledgedVuln struct {
+	Code   string `toml:"code"`
+	Reason string `toml:"reason"`
+}
+
+type ProjectConfig struct {
+	ReportToSlackChannel string             `toml:"report-to-slack-channel"`
+	SlackChannel         string             `toml:"slack-channel"` // TODO #27: Break in v1.0. Kept for backwards-compatibility
+	Acknowledged         []AcknowledgedVuln `toml:"acknowledged"`
+}
+
+func GetConfiguration(filename string) (config ProjectConfig, found bool, err error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return scanner.ProjectConfig{}, false, nil
+		return ProjectConfig{}, false, nil
 	} else if err != nil {
 		return config, false, errors.Join(errors.New("unexpected error when attempting to get project configuration"), err)
 	}

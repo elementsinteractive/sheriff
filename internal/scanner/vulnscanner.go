@@ -2,6 +2,8 @@
 package scanner
 
 import (
+	"sheriff/internal/config"
+
 	gogitlab "github.com/xanzy/go-gitlab"
 )
 
@@ -44,21 +46,10 @@ type Vulnerability struct {
 	AckReason         string // Optional reason for acknowledging the vulnerability
 }
 
-type AcknowledgedVuln struct {
-	Code   string `toml:"code"`
-	Reason string `toml:"reason"`
-}
-
-type ProjectConfig struct {
-	ReportToSlackChannel string             `toml:"report-to-slack-channel"`
-	SlackChannel         string             `toml:"slack-channel"` // TODO #27: Break in v1.0. Kept for backwards-compatibility
-	Acknowledged         []AcknowledgedVuln `toml:"acknowledged"`
-}
-
 // Report is the main report representation of a project vulnerability scan.
 type Report struct {
 	Project         gogitlab.Project
-	ProjectConfig   ProjectConfig // Contains the project-level configuration that users of sheriff may have in their repository
+	ProjectConfig   config.ProjectConfig // Contains the project-level configuration that users of sheriff may have in their repository
 	IsVulnerable    bool
 	Vulnerabilities []Vulnerability
 	IssueUrl        string // URL of the GitLab issue. Conditionally set if --gitlab-issue is passed

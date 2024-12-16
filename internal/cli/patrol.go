@@ -3,8 +3,8 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os/exec"
+	"sheriff/internal/config"
 	"sheriff/internal/git"
 	"sheriff/internal/gitlab"
 	"sheriff/internal/patrol"
@@ -101,26 +101,35 @@ var PatrolFlags = []cli.Flag{
 }
 
 func PatrolAction(cCtx *cli.Context) error {
-	verbose := cCtx.Bool(verboseFlag)
-
-	// Parse options
-	locations, err := parseUrls(cCtx.StringSlice(urlFlag))
+	config, err := config.GetPatrolConfiguration(config.PatrolCLIOpts{
+		Urls:                  cCtx.StringSlice(urlFlag),
+		ReportToIssue:         cCtx.Bool(reportToIssueFlag),
+		ReportToEmails:        cCtx.StringSlice(reportToEmailFlag),
+		ReportToSlackChannel:  cCtx.String(reportToSlackChannel),
+		EnableProjectReportTo: cCtx.Bool(reportEnableProjectReportToFlag),
+		SilentReport:          cCtx.Bool(silentReportFlag),
+		Verbose:               cCtx.Bool(verboseFlag),
+	})
 	if err != nil {
-		return errors.Join(errors.New("failed to parse `--url` options"), err)
+		return errors.Join(errors.New("failed to get patrol configuration"), err)
 	}
 
+	// Get tokens
+	gitlabToken := cCtx.String(gitlabTokenFlag)
+	slackToken := cCtx.String(slackTokenFlag)
+
 	// Create services
-	gitlabService, err := gitlab.New(cCtx.String(gitlabTokenFlag))
+	gitlabService, err := gitlab.New(gitlabToken)
 	if err != nil {
 		return errors.Join(errors.New("failed to create GitLab service"), err)
 	}
 
-	slackService, err := slack.New(cCtx.String(slackTokenFlag), verbose)
+	slackService, err := slack.New(slackToken, config.Verbose)
 	if err != nil {
 		return errors.Join(errors.New("failed to create Slack service"), err)
 	}
 
-	gitService := git.New(cCtx.String(gitlabTokenFlag))
+	gitService := git.New(gitlabToken)
 	osvService := scanner.NewOsvScanner()
 
 	patrolService := patrol.New(gitlabService, slackService, gitService, osvService)
@@ -128,59 +137,17 @@ func PatrolAction(cCtx *cli.Context) error {
 	// Check whether the necessary scanners are available
 	missingScanners := getMissingScanners(necessaryScanners)
 	if len(missingScanners) > 0 {
-		return fmt.Errorf("Cannot find all necessary scanners in $PATH, missing: %v", strings.Join(missingScanners, ", "))
+		return fmt.Errorf("cannot find all necessary scanners in $PATH, missing: %v", strings.Join(missingScanners, ", "))
 	}
 
 	// Do the patrol
-	if warn, err := patrolService.Patrol(
-		patrol.PatrolArgs{
-			Locations:             locations,
-			ReportToIssue:         cCtx.Bool(reportToIssueFlag),
-			ReportToEmails:        cCtx.StringSlice(reportToEmailFlag),
-			ReportToSlackChannel:  cCtx.String(reportToSlackChannel),
-			EnableProjectReportTo: cCtx.Bool(reportEnableProjectReportToFlag),
-			SilentReport:          cCtx.Bool(silentReportFlag),
-			Verbose:               verbose,
-		},
-	); err != nil {
+	if warn, err := patrolService.Patrol(config); err != nil {
 		return errors.Join(errors.New("failed to scan"), err)
 	} else if warn != nil {
 		return cli.Exit("Patrol was partially successful, some errors occurred. Check the logs for more information.", 1)
 	}
 
 	return nil
-}
-
-func parseUrls(uris []string) ([]patrol.ProjectLocation, error) {
-	locations := make([]patrol.ProjectLocation, len(uris))
-	for i, uri := range uris {
-		parsed, err := url.Parse(uri)
-		if err != nil || parsed == nil {
-			return nil, errors.Join(fmt.Errorf("failed to parse uri"), err)
-		}
-
-		if !parsed.IsAbs() {
-			return nil, fmt.Errorf("url missing platform scheme %v", uri)
-		}
-
-		if parsed.Scheme == string(patrol.Github) {
-			return nil, fmt.Errorf("github is currently unsupported, but is on our roadmap 😃") // TODO #9
-		} else if parsed.Scheme != string(patrol.Gitlab) {
-			return nil, fmt.Errorf("unsupported platform %v", parsed.Scheme)
-		}
-
-		path, err := url.JoinPath(parsed.Host, parsed.Path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to join host and path %v", uri)
-		}
-
-		locations[i] = patrol.ProjectLocation{
-			Type: patrol.PlatformType(parsed.Scheme),
-			Path: path,
-		}
-	}
-
-	return locations, nil
 }
 
 func getMissingScanners(necessary []string) []string {

@@ -1,6 +1,7 @@
 package publish
 
 import (
+	"sheriff/internal/config"
 	"sheriff/internal/scanner"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestPublishAsSpecificChannelSlackMessage(t *testing.T) {
 				Id: "CVE-2021-1234",
 			},
 		},
-		ProjectConfig: scanner.ProjectConfig{ReportToSlackChannel: "channel"},
+		ProjectConfig: config.ProjectConfig{ReportToSlackChannel: "channel"},
 	}
 
 	_ = PublishAsSpecificChannelSlackMessage([]scanner.Report{report}, mockSlackService)

@@ -1,6 +1,7 @@
 package patrol
 
 import (
+	"sheriff/internal/config"
 	"sheriff/internal/scanner"
 	"testing"
 
@@ -30,8 +31,8 @@ func TestScanNoProjects(t *testing.T) {
 
 	svc := New(mockGitlabService, mockSlackService, mockGitService, mockOSVService)
 
-	warn, err := svc.Patrol(PatrolArgs{
-		Locations:             []ProjectLocation{{Type: Gitlab, Path: "group/to/scan"}},
+	warn, err := svc.Patrol(config.PatrolConfig{
+		Locations:             []config.ProjectLocation{{Type: config.Gitlab, Path: "group/to/scan"}},
 		ReportToEmails:        []string{},
 		ReportToSlackChannel:  "channel",
 		ReportToIssue:         true,
@@ -63,8 +64,8 @@ func TestScanNonVulnerableProject(t *testing.T) {
 
 	svc := New(mockGitlabService, mockSlackService, mockGitService, mockOSVService)
 
-	warn, err := svc.Patrol(PatrolArgs{
-		Locations:             []ProjectLocation{{Type: Gitlab, Path: "group/to/scan"}},
+	warn, err := svc.Patrol(config.PatrolConfig{
+		Locations:             []config.ProjectLocation{{Type: config.Gitlab, Path: "group/to/scan"}},
 		ReportToEmails:        []string{},
 		ReportToSlackChannel:  "channel",
 		ReportToIssue:         true,
@@ -104,8 +105,8 @@ func TestScanVulnerableProject(t *testing.T) {
 
 	svc := New(mockGitlabService, mockSlackService, mockGitService, mockOSVService)
 
-	warn, err := svc.Patrol(PatrolArgs{
-		Locations:             []ProjectLocation{{Type: Gitlab, Path: "group/to/scan"}},
+	warn, err := svc.Patrol(config.PatrolConfig{
+		Locations:             []config.ProjectLocation{{Type: config.Gitlab, Path: "group/to/scan"}},
 		ReportToEmails:        []string{},
 		ReportToSlackChannel:  "channel",
 		ReportToIssue:         true,
@@ -134,8 +135,8 @@ func TestMarkVulnsAsAcknowledgedInReport(t *testing.T) {
 			},
 		},
 	}
-	config := scanner.ProjectConfig{
-		Acknowledged: []scanner.AcknowledgedVuln{
+	config := config.ProjectConfig{
+		Acknowledged: []config.AcknowledgedVuln{
 			{
 				Code:   "CVE-1",
 				Reason: "This is a reason",

@@ -23,33 +23,10 @@ import (
 const tempScanDir = "tmp_scans"
 const projectConfigFileName = "sheriff.toml"
 
-type PlatformType string
-
-const (
-	Gitlab PlatformType = "gitlab"
-	Github PlatformType = "github"
-)
-
-type ProjectLocation struct {
-	Type PlatformType
-	Path string
-}
-
-// PatrolArgs is a struct to store the arguments for the main patrol function.
-type PatrolArgs struct {
-	Locations             []ProjectLocation
-	ReportToEmails        []string
-	ReportToSlackChannel  string
-	ReportToIssue         bool
-	EnableProjectReportTo bool
-	SilentReport          bool
-	Verbose               bool
-}
-
 // securityPatroller is the interface of the main security scanner service of this tool.
 type securityPatroller interface {
 	// Scans the given Gitlab groups and projects, creates and publishes the necessary reports
-	Patrol(args PatrolArgs) (warn error, err error)
+	Patrol(args config.PatrolConfig) (warn error, err error)
 }
 
 // sheriffService is the implementation of the SecurityPatroller interface.
@@ -73,7 +50,7 @@ func New(gitlabService gitlab.IService, slackService slack.IService, gitService 
 }
 
 // Patrol scans the given Gitlab groups and projects, creates and publishes the necessary reports.
-func (s *sheriffService) Patrol(args PatrolArgs) (warn error, err error) {
+func (s *sheriffService) Patrol(args config.PatrolConfig) (warn error, err error) {
 	scanReports, swarn, err := s.scanAndGetReports(args.Locations)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to scan projects"), err)
@@ -101,7 +78,7 @@ func (s *sheriffService) Patrol(args PatrolArgs) (warn error, err error) {
 		if args.ReportToSlackChannel != "" {
 			log.Info().Str("slackChannel", args.ReportToSlackChannel).Msg("Posting report to slack channel")
 
-			paths := pie.Map(args.Locations, func(v ProjectLocation) string { return v.Path })
+			paths := pie.Map(args.Locations, func(v config.ProjectLocation) string { return v.Path })
 			if err := publish.PublishAsGeneralSlackMessage(args.ReportToSlackChannel, scanReports, paths, s.slackService); err != nil {
 				log.Error().Err(err).Msg("Failed to post slack report")
 				err = errors.Join(errors.New("failed to post slack report"), err)
@@ -124,7 +101,7 @@ func (s *sheriffService) Patrol(args PatrolArgs) (warn error, err error) {
 	return warn, nil
 }
 
-func (s *sheriffService) scanAndGetReports(locations []ProjectLocation) (reports []scanner.Report, warn error, err error) {
+func (s *sheriffService) scanAndGetReports(locations []config.ProjectLocation) (reports []scanner.Report, warn error, err error) {
 	// Create a temporary directory to store the scans
 	err = os.MkdirAll(tempScanDir, os.ModePerm)
 	if err != nil {
@@ -134,8 +111,8 @@ func (s *sheriffService) scanAndGetReports(locations []ProjectLocation) (reports
 	log.Info().Str("path", tempScanDir).Msg("Created temporary directory")
 
 	gitlabLocs := pie.Map(
-		pie.Filter(locations, func(v ProjectLocation) bool { return v.Type == Gitlab }),
-		func(v ProjectLocation) string { return v.Path },
+		pie.Filter(locations, func(v config.ProjectLocation) bool { return v.Type == config.Gitlab }),
+		func(v config.ProjectLocation) string { return v.Path },
 	)
 	log.Info().Strs("locations", gitlabLocs).Msg("Getting the list of projects to scan")
 
@@ -221,7 +198,7 @@ func (s *sheriffService) scanProject(project gogitlab.Project) (report *scanner.
 // markVulnsAsAcknowledgedInReport marks vulnerabilities as acknowledged in the report
 // if the user has acknowledged them in the project configuration.
 // It modifies the given report in place.
-func markVulnsAsAcknowledgedInReport(report *scanner.Report, config scanner.ProjectConfig) {
+func markVulnsAsAcknowledgedInReport(report *scanner.Report, config config.ProjectConfig) {
 	ackCodes := make(map[string]bool, len(config.Acknowledged))
 	AckReasons := make(map[string]string, len(config.Acknowledged))
 	for _, ack := range config.Acknowledged {
