@@ -1,4 +1,4 @@
-package patrol
+package config
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func getConfiguration(filename string) (config scanner.ProjectConfig, found bool, err error) {
+func GetConfiguration(filename string) (config scanner.ProjectConfig, found bool, err error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return scanner.ProjectConfig{}, false, nil
 	} else if err != nil {

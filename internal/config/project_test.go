@@ -1,4 +1,4 @@
-package patrol
+package config
 
 import (
 	"sheriff/internal/scanner"
@@ -23,7 +23,7 @@ func TestGetConfiguration(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.filename, func(t *testing.T) {
-			got, found, err := getConfiguration(tc.filename)
+			got, found, err := GetConfiguration(tc.filename)
 
 			assert.Equal(t, tc.wantFound, found)
 			assert.Equal(t, err != nil, tc.wantErr)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sheriff/internal/config"
 	"sheriff/internal/git"
 	"sheriff/internal/gitlab"
 	"sheriff/internal/publish"
@@ -191,7 +192,7 @@ func (s *sheriffService) scanProject(project gogitlab.Project) (report *scanner.
 		return nil, errors.Join(errors.New("failed to clone project"), err)
 	}
 
-	config, found, err := getConfiguration(path.Join(dir, projectConfigFileName))
+	config, found, err := config.GetConfiguration(path.Join(dir, projectConfigFileName))
 	if err != nil {
 		log.Error().Err(err).Str("project", project.PathWithNamespace).Msg("Failed to read project configuration. Running with empty configuration.")
 	} else if found {
