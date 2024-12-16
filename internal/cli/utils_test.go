@@ -2,39 +2,14 @@ package cli
 
 import (
 	"flag"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/urfave/cli/v2"
 )
-
-func TestCombineBeforeFuncs(t *testing.T) {
-	mockBeforeFuncs := new(mockBeforeFuncs)
-	mockBeforeFuncs.On("Func1", mock.Anything).Return(nil)
-	mockBeforeFuncs.On("Func2", mock.Anything).Return(nil)
-
-	before_func := CombineBeforeFuncs(mockBeforeFuncs.Func1, mockBeforeFuncs.Func2)
-
-	_ = before_func(nil)
-
-	mockBeforeFuncs.AssertExpectations(t)
-}
-
-type mockBeforeFuncs struct {
-	mock.Mock
-}
-
-func (m *mockBeforeFuncs) Func1(cCtx *cli.Context) error {
-	args := m.Called(cCtx)
-	return args.Error(0)
-}
-
-func (m *mockBeforeFuncs) Func2(cCtx *cli.Context) error {
-	args := m.Called(cCtx)
-	return args.Error(0)
-}
 
 func TestConfigureLogs(t *testing.T) {
 	testCases := map[bool]zerolog.Level{
@@ -53,26 +28,127 @@ func TestConfigureLogs(t *testing.T) {
 	}
 }
 
-// Tests for ConfigFileLoader when no file is found.
-// There should be an equivalent test for when the file is found, but it's tough.
-func TestConfigFileLoaderNoFile(t *testing.T) {
-	flag := flag.NewFlagSet("config", flag.ContinueOnError)
-	flag.String("config", "nonexistent", "")
-	context := cli.NewContext(nil, flag, nil)
+func TestGetStringIfSettest(t *testing.T) {
+	want := "hello"
+	flagName := "testFlag"
 
-	beforeFunc := GetConfigFileLoader(nil, "config")
-	err := beforeFunc(context)
+	flag := flag.NewFlagSet("", flag.ContinueOnError)
+	flag.String(flagName, "", "")
+	_ = flag.Set(flagName, want)
+	cCtx := cli.NewContext(nil, flag, nil)
 
-	assert.Nil(t, err)
+	got := getStringIfSet(cCtx, flagName)
+
+	assert.Equal(t, want, *got)
 }
 
-func TestLogArguments(t *testing.T) {
-	flag := flag.NewFlagSet("flag", flag.ContinueOnError)
-	flag.String("some-flag", "", "")
-	_ = flag.Set("some-flag", "value")
-	context := cli.NewContext(nil, flag, nil)
+func TestGetStringIfSet(t *testing.T) {
+	testCases := []struct {
+		name string
+		want string
+		set  bool
+	}{{
+		name: "value",
+		want: "hello",
+		set:  true,
+	}, {
+		name: "nil",
+		want: "",
+		set:  false,
+	}}
 
-	_ = LogArguments(context)
+	flagName := "testFlag"
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			flag := flag.NewFlagSet("", flag.ContinueOnError)
+			flag.String(flagName, "", "")
+			if tc.set {
+				_ = flag.Set(flagName, tc.want)
+			}
+			cCtx := cli.NewContext(nil, flag, nil)
 
-	// How to assert that the log message was correct?
+			got := getStringIfSet(cCtx, flagName)
+
+			if tc.set {
+				assert.NotNil(t, got)
+				assert.Equal(t, tc.want, *got)
+			} else {
+				assert.Nil(t, got)
+			}
+		})
+	}
+}
+
+func TestGetStringSliceIfSet(t *testing.T) {
+	testCases := []struct {
+		name string
+		want []string
+		set  bool
+	}{{
+		name: "value",
+		want: []string{"hello", "world"},
+		set:  true,
+	}, {
+		name: "nil",
+		want: []string{},
+		set:  false,
+	}}
+
+	flagName := "testFlag"
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			flag := flag.NewFlagSet("", flag.ContinueOnError)
+			flag.Var(&cli.StringSlice{}, flagName, "")
+			if tc.set {
+				_ = flag.Set(flagName, strings.Join(tc.want, ", "))
+			}
+			cCtx := cli.NewContext(nil, flag, nil)
+
+			got := getStringSliceIfSet(cCtx, flagName)
+
+			if tc.set {
+				assert.NotNil(t, got)
+				assert.Equal(t, tc.want, *got)
+			} else {
+				assert.Nil(t, got)
+			}
+		})
+	}
+}
+
+func TestGetBoolIfSet(t *testing.T) {
+	testCases := []struct {
+		name string
+		want bool
+		set  bool
+	}{{
+		name: "value",
+		want: true,
+		set:  true,
+	}, {
+		name: "nil",
+		want: false,
+		set:  false,
+	}}
+
+	flagName := "testFlag"
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			flag := flag.NewFlagSet("", flag.ContinueOnError)
+			flag.Bool(flagName, false, "")
+			if tc.set {
+				_ = flag.Set(flagName, strconv.FormatBool(tc.want))
+			}
+			cCtx := cli.NewContext(nil, flag, nil)
+
+			got := getBoolIfSet(cCtx, flagName)
+
+			if tc.set {
+				assert.NotNil(t, got)
+				assert.Equal(t, tc.want, *got)
+			} else {
+				assert.Nil(t, got)
+			}
+		})
+	}
 }

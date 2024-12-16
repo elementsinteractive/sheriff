@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"sheriff/internal/config"
 	"sheriff/internal/git"
 	"sheriff/internal/gitlab"
@@ -21,7 +20,6 @@ import (
 )
 
 const tempScanDir = "tmp_scans"
-const projectConfigFileName = "sheriff.toml"
 
 // securityPatroller is the interface of the main security scanner service of this tool.
 type securityPatroller interface {
@@ -169,14 +167,7 @@ func (s *sheriffService) scanProject(project gogitlab.Project) (report *scanner.
 		return nil, errors.Join(errors.New("failed to clone project"), err)
 	}
 
-	config, found, err := config.GetConfiguration(path.Join(dir, projectConfigFileName))
-	if err != nil {
-		log.Error().Err(err).Str("project", project.PathWithNamespace).Msg("Failed to read project configuration. Running with empty configuration.")
-	} else if found {
-		log.Info().Str("project", project.PathWithNamespace).Msg("Found project configuration")
-	} else {
-		log.Info().Str("project", project.PathWithNamespace).Msg("No project configuration found. Using default")
-	}
+	config := config.GetProjectConfiguration(project.NameWithNamespace, dir)
 
 	// Scan the project
 	log.Info().Str("project", project.Name).Msg("Running osv-scanner")

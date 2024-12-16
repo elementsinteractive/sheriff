@@ -22,7 +22,7 @@ This file is formatted in TOML and can contain any of the flags that can be set 
 `,
 				Flags:  PatrolFlags,
 				Action: PatrolAction,
-				Before: CombineBeforeFuncs(ConfigureLogs, GetConfigFileLoader(PatrolFlags, configFlag), LogArguments),
+				Before: ConfigureLogs,
 			},
 		},
 	}

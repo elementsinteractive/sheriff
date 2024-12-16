@@ -1,13 +1,14 @@
 package config
 
 import (
-	"errors"
-	"os"
+	"sheriff/internal/toml"
 
-	"github.com/BurntSushi/toml"
-	"github.com/elliotchance/pie/v2"
+	"path"
+
 	"github.com/rs/zerolog/log"
 )
+
+const projectConfigFileName = "sheriff.toml"
 
 type AcknowledgedVuln struct {
 	Code   string `toml:"code"`
@@ -20,27 +21,15 @@ type ProjectConfig struct {
 	Acknowledged         []AcknowledgedVuln `toml:"acknowledged"`
 }
 
-func GetConfiguration(filename string) (config ProjectConfig, found bool, err error) {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return ProjectConfig{}, false, nil
-	} else if err != nil {
-		return config, false, errors.Join(errors.New("unexpected error when attempting to get project configuration"), err)
-	}
-
-	m, err := toml.DecodeFile(filename, &config)
+func GetProjectConfiguration(projectName string, dir string) (config ProjectConfig) {
+	found, err := toml.GetFile(path.Join(dir, projectConfigFileName), &config)
 	if err != nil {
-		return config, true, errors.Join(errors.New("failed to decode project configuration"), err)
+		log.Error().Err(err).Str("project", projectName).Msg("Failed to read project configuration. Running with empty configuration.")
+	} else if found {
+		log.Info().Str("project", projectName).Msg("Found project configuration")
+	} else {
+		log.Info().Str("project", projectName).Msg("No project configuration found. Using default")
 	}
 
-	if undecoded := m.Undecoded(); len(undecoded) > 0 {
-		keys := pie.Map(undecoded, func(u toml.Key) string { return u.String() })
-
-		log.Warn().Strs("keys", keys).Msg("Found undecoded keys in project configuration")
-	}
-
-	if config.SlackChannel != "" {
-		config.ReportToSlackChannel = config.SlackChannel
-	}
-
-	return config, true, nil
+	return
 }

@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"github.com/urfave/cli/v2/altsrc"
 )
 
 type CommandCategory string
@@ -36,7 +35,6 @@ const silentReportFlag = "silent"
 const gitlabTokenFlag = "gitlab-token"
 const slackTokenFlag = "slack-token"
 
-var sensitiveFlags = []string{gitlabTokenFlag, slackTokenFlag}
 var necessaryScanners = []string{scanner.OsvCommandName}
 
 var PatrolFlags = []cli.Flag{
@@ -52,38 +50,38 @@ var PatrolFlags = []cli.Flag{
 		Category: string(Miscellaneous),
 		Value:    false,
 	},
-	altsrc.NewStringSliceFlag(&cli.StringSliceFlag{
+	&cli.StringSliceFlag{
 		Name:     urlFlag,
 		Usage:    "Groups and projects to scan for vulnerabilities (list argument which can be repeated)",
 		Category: string(Scanning),
-	}),
-	altsrc.NewStringSliceFlag(&cli.StringSliceFlag{
+	},
+	&cli.StringSliceFlag{
 		Name:     reportToEmailFlag,
 		Usage:    "Enable reporting to the provided list of emails",
 		Category: string(Reporting),
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
+	},
+	&cli.BoolFlag{
 		Name:     reportToIssueFlag,
 		Usage:    "Enable or disable reporting to the project's issue on the associated platform (gitlab, github, ...)",
 		Category: string(Reporting),
-	}),
-	altsrc.NewStringFlag(&cli.StringFlag{
+	},
+	&cli.StringFlag{
 		Name:     reportToSlackChannel,
 		Usage:    "Enable reporting to the provided slack channel",
 		Category: string(Reporting),
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
+	},
+	&cli.BoolFlag{
 		Name:     reportEnableProjectReportToFlag,
 		Usage:    "Enable project-level configuration for '--report-to-*'.",
 		Category: string(Reporting),
 		Value:    true,
-	}),
-	altsrc.NewBoolFlag(&cli.BoolFlag{
+	},
+	&cli.BoolFlag{
 		Name:     silentReportFlag,
 		Usage:    "Disable report output to stdout.",
 		Category: string(Reporting),
 		Value:    false,
-	}),
+	},
 	// Secret tokens
 	&cli.StringFlag{
 		Name:     gitlabTokenFlag,
@@ -102,13 +100,20 @@ var PatrolFlags = []cli.Flag{
 
 func PatrolAction(cCtx *cli.Context) error {
 	config, err := config.GetPatrolConfiguration(config.PatrolCLIOpts{
-		Urls:                  cCtx.StringSlice(urlFlag),
-		ReportToIssue:         cCtx.Bool(reportToIssueFlag),
-		ReportToEmails:        cCtx.StringSlice(reportToEmailFlag),
-		ReportToSlackChannel:  cCtx.String(reportToSlackChannel),
-		EnableProjectReportTo: cCtx.Bool(reportEnableProjectReportToFlag),
-		SilentReport:          cCtx.Bool(silentReportFlag),
-		Verbose:               cCtx.Bool(verboseFlag),
+		PatrolCommonOpts: config.PatrolCommonOpts{
+			Urls: getStringSliceIfSet(cCtx, urlFlag),
+			Report: config.PatrolReportOpts{
+				To: config.PatrolReportToOpts{
+					Issue:                 getBoolIfSet(cCtx, reportToIssueFlag),
+					Emails:                getStringSliceIfSet(cCtx, reportToEmailFlag),
+					SlackChannel:          getStringIfSet(cCtx, reportToSlackChannel),
+					EnableProjectReportTo: getBoolIfSet(cCtx, reportEnableProjectReportToFlag),
+				},
+				SilentReport: getBoolIfSet(cCtx, silentReportFlag),
+			},
+		},
+		Config:  cCtx.String(configFlag),
+		Verbose: cCtx.Bool(verboseFlag),
 	})
 	if err != nil {
 		return errors.Join(errors.New("failed to get patrol configuration"), err)

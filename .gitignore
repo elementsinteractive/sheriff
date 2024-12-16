@@ -29,4 +29,4 @@ go.work.sum
 tmp_scans/
 
 # Sheriff configuration file, untracked for use in local development
-sheriff.toml
+/sheriff.toml
