@@ -1,8 +1,6 @@
 package config
 
 import (
-	"sheriff/internal/toml"
-
 	"path"
 
 	"github.com/rs/zerolog/log"
@@ -22,7 +20,7 @@ type ProjectConfig struct {
 }
 
 func GetProjectConfiguration(projectName string, dir string) (config ProjectConfig) {
-	found, err := toml.GetFile(path.Join(dir, projectConfigFileName), &config)
+	found, err := getTOMLFile(path.Join(dir, projectConfigFileName), &config)
 	if err != nil {
 		log.Error().Err(err).Str("project", projectName).Msg("Failed to read project configuration. Running with empty configuration.")
 	} else if found {

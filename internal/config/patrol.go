@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"sheriff/internal/toml"
 
 	zerolog "github.com/rs/zerolog/log"
 )
@@ -49,14 +48,14 @@ type PatrolCommonOpts struct {
 	Report  PatrolReportOpts `toml:"report"`
 }
 
-// Options only available from CLI configuration
+// PatrolCLIOpts are the options only available from CLI configuration
 type PatrolCLIOpts struct {
 	Config  string
 	Verbose bool
 	PatrolCommonOpts
 }
 
-// Options only available from File configuration
+// PatrolFileOpts are the options only available from File configuration
 type PatrolFileOpts struct {
 	PatrolCommonOpts
 }
@@ -65,7 +64,7 @@ func GetPatrolConfiguration(cliOpts PatrolCLIOpts) (config PatrolConfig, err err
 	zerolog.Debug().Interface("cli options", cliOpts).Msg("Running with cli options")
 	var tomlOpts PatrolFileOpts
 	if cliOpts.Config != "" {
-		found, err := toml.GetFile(cliOpts.Config, &tomlOpts)
+		found, err := getTOMLFile(cliOpts.Config, &tomlOpts)
 		if !found {
 			return config, fmt.Errorf("failed to find configuration file %v", cliOpts.Config)
 		} else if err != nil {
@@ -105,7 +104,7 @@ func mergeConfigs(cliOpts PatrolCLIOpts, fileOpts PatrolFileOpts) (config Patrol
 	return
 }
 
-// Returns valueA if != nil, otherwise valueB if != nil, otherwise the provided default value
+// getCliOrFileOption returns valueA if != nil, otherwise valueB if != nil, otherwise the provided default value
 func getCliOrFileOption[T interface{}](valueA *T, valueB *T, def T) (r T) {
 	if valueA != nil {
 		return *valueA

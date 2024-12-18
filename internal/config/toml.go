@@ -1,4 +1,4 @@
-package toml
+package config
 
 import (
 	"errors"
@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Parses and sets passed config pointer by value
-func GetFile[T interface{}](filename string, config *T) (found bool, err error) {
+// getTOMLFile parses and sets passed config pointer by value
+func getTOMLFile[T interface{}](filename string, config *T) (found bool, err error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return false, nil
 	} else if err != nil {
