@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +10,7 @@ func TestGetPatrolConfiguration(t *testing.T) {
 	want := PatrolConfig{
 		Locations:             []ProjectLocation{{Type: Gitlab, Path: "group1"}, {Type: Gitlab, Path: "group2/project1"}},
 		ReportToEmails:        []string{"some-email@gmail.com"},
-		ReportToSlackChannel:  "report-slack-channel",
+		ReportToSlackChannels: []string{"report-slack-channel"},
 		ReportToIssue:         true,
 		EnableProjectReportTo: true,
 		SilentReport:          true,
@@ -31,7 +30,7 @@ func TestGetPatrolConfigurationCLIOverridesFile(t *testing.T) {
 	want := PatrolConfig{
 		Locations:             []ProjectLocation{{Type: Gitlab, Path: "group1"}, {Type: Gitlab, Path: "group2/project1"}},
 		ReportToEmails:        []string{"email@gmail.com", "other@gmail.com"},
-		ReportToSlackChannel:  "other-slack-channel",
+		ReportToSlackChannels: []string{"other-slack-channel"},
 		ReportToIssue:         false,
 		EnableProjectReportTo: false, // Here we test overriding with a zero-value, which works!
 		SilentReport:          false,
@@ -42,11 +41,11 @@ func TestGetPatrolConfigurationCLIOverridesFile(t *testing.T) {
 		Config:  "testdata/patrol/valid.toml",
 		Verbose: true,
 		PatrolCommonOpts: PatrolCommonOpts{
-			Urls: &[]string{"gitlab://group1", "gitlab://group2/project1"},
+			Targets: &[]string{"gitlab://group1", "gitlab://group2/project1"},
 			Report: PatrolReportOpts{
 				To: PatrolReportToOpts{
 					Emails:                &want.ReportToEmails,
-					SlackChannel:          &want.ReportToSlackChannel,
+					SlackChannels:         &want.ReportToSlackChannels,
 					Issue:                 &want.ReportToIssue,
 					EnableProjectReportTo: &want.EnableProjectReportTo,
 				},
@@ -90,18 +89,16 @@ func TestParseUrls(t *testing.T) {
 		{[]string{"github://organization/project"}, &ProjectLocation{Type: "github", Path: "organization/project"}, true},
 		{[]string{"unknown://namespace/project"}, nil, true},
 		{[]string{"unknown://not a path"}, nil, true},
-		{[]string{"not a url"}, nil, true},
+		{[]string{"not a target"}, nil, true},
 	}
 
 	for _, tc := range testCases {
-		urls, err := parseUrls(tc.paths)
-
-		fmt.Print(urls)
+		targets, err := parseTargets(tc.paths)
 
 		if tc.wantError {
 			assert.NotNil(t, err)
 		} else {
-			assert.Equal(t, tc.wantProjectLocation, &(urls[0]))
+			assert.Equal(t, tc.wantProjectLocation, &(targets[0]))
 		}
 	}
 }

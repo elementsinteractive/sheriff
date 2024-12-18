@@ -140,7 +140,7 @@ func formatSummary(reportsBySeverityKind map[scanner.SeverityScoreKind][]scanner
 			true, false,
 		),
 	)
-	subtitleGroups := formatSubtitleList("urls", paths)
+	subtitleGroups := formatSubtitleList("targets", paths)
 	subtitleCount := goslack.NewContextBlock("subtitleCount", goslack.NewTextBlockObject("mrkdwn", fmt.Sprintf("Total projects scanned: %v", totalReports), false, false))
 
 	counts := pie.Map(severityScoreOrder, func(kind scanner.SeverityScoreKind) *goslack.TextBlockObject {

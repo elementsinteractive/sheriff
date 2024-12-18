@@ -24,7 +24,7 @@ type ProjectLocation struct {
 type PatrolConfig struct {
 	Locations             []ProjectLocation
 	ReportToEmails        []string
-	ReportToSlackChannel  string
+	ReportToSlackChannels []string
 	ReportToIssue         bool
 	EnableProjectReportTo bool
 	SilentReport          bool
@@ -34,7 +34,7 @@ type PatrolConfig struct {
 // Options common in both the CLI options & file options
 type PatrolReportToOpts struct {
 	Emails                *[]string `toml:"emails"`
-	SlackChannel          *string   `toml:"slack-channel"`
+	SlackChannels         *[]string `toml:"slack-channels"`
 	Issue                 *bool     `toml:"issue"`
 	EnableProjectReportTo *bool     `toml:"enable-project-report-to"`
 }
@@ -45,8 +45,8 @@ type PatrolReportOpts struct {
 }
 
 type PatrolCommonOpts struct {
-	Urls   *[]string        `toml:"urls"`
-	Report PatrolReportOpts `toml:"report"`
+	Targets *[]string        `toml:"targets"`
+	Report  PatrolReportOpts `toml:"report"`
 }
 
 // Options only available from CLI configuration
@@ -86,17 +86,17 @@ func GetPatrolConfiguration(cliOpts PatrolCLIOpts) (config PatrolConfig, err err
 }
 
 func mergeConfigs(cliOpts PatrolCLIOpts, fileOpts PatrolFileOpts) (config PatrolConfig, err error) {
-	locations := getCliOrFileOption(cliOpts.Urls, fileOpts.Urls, []string{})
-	parsedLocations, err := parseUrls(locations)
+	locations := getCliOrFileOption(cliOpts.Targets, fileOpts.Targets, []string{})
+	parsedLocations, err := parseTargets(locations)
 	if err != nil {
-		return config, errors.Join(errors.New("could not parse urls from CLI options"), err)
+		return config, errors.Join(errors.New("could not parse targets from CLI options"), err)
 	}
 
 	config = PatrolConfig{
 		Locations:             parsedLocations,
 		ReportToIssue:         getCliOrFileOption(cliOpts.Report.To.Issue, fileOpts.Report.To.Issue, false),
 		ReportToEmails:        getCliOrFileOption(cliOpts.Report.To.Emails, fileOpts.Report.To.Emails, []string{}),
-		ReportToSlackChannel:  getCliOrFileOption(cliOpts.Report.To.SlackChannel, fileOpts.Report.To.SlackChannel, ""),
+		ReportToSlackChannels: getCliOrFileOption(cliOpts.Report.To.SlackChannels, fileOpts.Report.To.SlackChannels, []string{}),
 		EnableProjectReportTo: getCliOrFileOption(cliOpts.Report.To.EnableProjectReportTo, fileOpts.Report.To.EnableProjectReportTo, false),
 		SilentReport:          getCliOrFileOption(cliOpts.Report.SilentReport, fileOpts.Report.SilentReport, false),
 		Verbose:               cliOpts.Verbose,
@@ -118,16 +118,16 @@ func getCliOrFileOption[T interface{}](valueA *T, valueB *T, def T) (r T) {
 	return def
 }
 
-func parseUrls(uris []string) ([]ProjectLocation, error) {
-	locations := make([]ProjectLocation, len(uris))
-	for i, uri := range uris {
-		parsed, err := url.Parse(uri)
+func parseTargets(targets []string) ([]ProjectLocation, error) {
+	locations := make([]ProjectLocation, len(targets))
+	for i, t := range targets {
+		parsed, err := url.Parse(t)
 		if err != nil || parsed == nil {
 			return nil, errors.Join(fmt.Errorf("failed to parse uri"), err)
 		}
 
 		if !parsed.IsAbs() {
-			return nil, fmt.Errorf("url missing platform scheme %v", uri)
+			return nil, fmt.Errorf("target missing platform scheme %v", t)
 		}
 
 		if parsed.Scheme == string(Github) {
@@ -138,7 +138,7 @@ func parseUrls(uris []string) ([]ProjectLocation, error) {
 
 		path, err := url.JoinPath(parsed.Host, parsed.Path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to join host and path %v", uri)
+			return nil, fmt.Errorf("failed to join host and path %v", t)
 		}
 
 		locations[i] = ProjectLocation{

@@ -26,7 +26,7 @@ const (
 
 const configFlag = "config"
 const verboseFlag = "verbose"
-const urlFlag = "url"
+const targetFlag = "target"
 const reportToEmailFlag = "report-to-email"
 const reportToIssueFlag = "report-to-issue"
 const reportToSlackChannel = "report-to-slack-channel"
@@ -51,7 +51,7 @@ var PatrolFlags = []cli.Flag{
 		Value:    false,
 	},
 	&cli.StringSliceFlag{
-		Name:     urlFlag,
+		Name:     targetFlag,
 		Usage:    "Groups and projects to scan for vulnerabilities (list argument which can be repeated)",
 		Category: string(Scanning),
 	},
@@ -65,9 +65,9 @@ var PatrolFlags = []cli.Flag{
 		Usage:    "Enable or disable reporting to the project's issue on the associated platform (gitlab, github, ...)",
 		Category: string(Reporting),
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:     reportToSlackChannel,
-		Usage:    "Enable reporting to the provided slack channel",
+		Usage:    "Enable reporting to the provided slack channels",
 		Category: string(Reporting),
 	},
 	&cli.BoolFlag{
@@ -101,12 +101,12 @@ var PatrolFlags = []cli.Flag{
 func PatrolAction(cCtx *cli.Context) error {
 	config, err := config.GetPatrolConfiguration(config.PatrolCLIOpts{
 		PatrolCommonOpts: config.PatrolCommonOpts{
-			Urls: getStringSliceIfSet(cCtx, urlFlag),
+			Targets: getStringSliceIfSet(cCtx, targetFlag),
 			Report: config.PatrolReportOpts{
 				To: config.PatrolReportToOpts{
 					Issue:                 getBoolIfSet(cCtx, reportToIssueFlag),
 					Emails:                getStringSliceIfSet(cCtx, reportToEmailFlag),
-					SlackChannel:          getStringIfSet(cCtx, reportToSlackChannel),
+					SlackChannels:         getStringSliceIfSet(cCtx, reportToSlackChannel),
 					EnableProjectReportTo: getBoolIfSet(cCtx, reportEnableProjectReportToFlag),
 				},
 				SilentReport: getBoolIfSet(cCtx, silentReportFlag),

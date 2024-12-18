@@ -19,6 +19,21 @@ Sheriff is a tool to scan repositories and generate security reports.
   - [CLI flags](#cli-flags)
   - [Environment variables](#environment-variables)
   - [Configuration file](#configuration-file)
+  - [Configuration options](#configuration-options)
+    - [Miscellaneous](#miscellaneous)
+      - [config](#config)
+      - [verbose](#verbose)
+    - [Scanning](#scanning)
+      - [targets](#targets)
+    - [Reporting](#reporting)
+      - [report to issue](#report-to-issue)
+      - [report to email (TODO #12)](#report-to-email-todo-12)
+      - [report to slack channels](#report-to-slack-channels)
+      - [enable project report to](#enable-project-report-to)
+      - [silent](#silent)
+    - [Tokens](#tokens)
+      - [gitlab token](#gitlab-token)
+      - [slack token](#slack-token)
 - [Supported platforms](#supported-platforms)
   - [Source code hosting services](#source-code-hosting-services)
   - [Messaging services](#messaging-services)
@@ -28,7 +43,7 @@ Sheriff is a tool to scan repositories and generate security reports.
 ## Quick Usage
 
 ```sh
-sheriff patrol --url gitlab://your-namespace-or-group --report-to-issue
+sheriff patrol --target gitlab://your-namespace-or-group --report-to-issue
 ```
 
 ## How it works
@@ -104,15 +119,108 @@ Only the **Reporting** and **Scanning** sections of configuration parameters are
 In this case you may choose to create a config file such as the following:
 
 ```toml
-url = ["namespace/group", "namespace/group/cool-repo"]
-report-to-slack-channel = "sheriff-report-test"
-report-to-gitlab-issue = true
+targets = ["namespace/group", "namespace/group/cool-repo"]
+[report.to]
+slack-channel = "sheriff-report-test"
+issue = true
 ```
 
 And if you wish to specify a different file, you can do so with `sheriff patrol --config your-config-file.toml`.
 
 > [!NOTE]
 > When using several types of configurations at once there is an order of preference: **cli flags** > **env vars** > **config file**
+
+### Configuration options
+
+#### Miscellaneous
+
+##### config
+
+| CLI options | File config |
+|---|---|
+| `--config` | - |
+
+Sets the path of your sheriff configuration file
+
+##### verbose
+
+| CLI options | File config |
+|---|---|
+| `--verbose`/`-v` | - |
+
+Sets the log level to verbose
+
+#### Scanning
+
+##### targets
+
+| CLI options | File config |
+|---|---|
+| (repeatable) `--target` | `targets` |
+
+Sets the list of groups and projects to be scanned.
+The expected format of a target is `platform://path/to/your/group-or-project`
+
+For example:
+`--target gitlab://namespace/group --target github://organization/project`
+
+#### Reporting
+
+##### report to issue
+
+| CLI options | File config |
+|---|---|
+| `--report-to-issue` | <code>[report.to]<br>issue</code> |
+
+Enables reporting to an issue on the project's platform
+
+##### report to email (TODO #12)
+
+| CLI options | File config |
+|---|---|
+| (repeatable) `--report-to-email` | <code>[report.to]<br>emails</code> |
+
+Sets the list of email to which a full scan report should be sent
+
+##### report to slack channels
+
+| CLI options | File config |
+|---|---|
+| (repeatable) `--report-to-slack-channels` | <code>[report.to]<br>slack-channels</code> |
+
+##### enable project report to
+
+| CLI options | File config |
+|---|---|
+| `--report-to-enable-project-report-to` | <code>[report.to]<br>enable-project-report-to</code> |
+
+Enable project-level configuration `report-to` to allow projects to control where their individual reports are sent
+
+##### silent
+
+| CLI options | File config |
+|---|---|
+| `--report-silent` | <code>[report]<br>silent</code> |
+
+Disable printing the report in the bash output
+
+#### Tokens
+
+##### gitlab token
+
+| ENV VAR |
+|---|
+| `$GITLAB_TOKEN` |
+
+Sets the token to be used when fetching projects from gitlab
+
+##### slack token
+
+| ENV VAR |
+|---|
+| `$SLACK_TOKEN` |
+
+Sets the token to be used when reporting the security report on slack
 
 ## Supported platforms
 

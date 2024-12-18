@@ -34,7 +34,7 @@ func TestScanNoProjects(t *testing.T) {
 	warn, err := svc.Patrol(config.PatrolConfig{
 		Locations:             []config.ProjectLocation{{Type: config.Gitlab, Path: "group/to/scan"}},
 		ReportToEmails:        []string{},
-		ReportToSlackChannel:  "channel",
+		ReportToSlackChannels: []string{"channel"},
 		ReportToIssue:         true,
 		EnableProjectReportTo: true,
 		Verbose:               true,
@@ -67,7 +67,7 @@ func TestScanNonVulnerableProject(t *testing.T) {
 	warn, err := svc.Patrol(config.PatrolConfig{
 		Locations:             []config.ProjectLocation{{Type: config.Gitlab, Path: "group/to/scan"}},
 		ReportToEmails:        []string{},
-		ReportToSlackChannel:  "channel",
+		ReportToSlackChannels: []string{"channel"},
 		ReportToIssue:         true,
 		EnableProjectReportTo: true,
 		Verbose:               true,
@@ -108,7 +108,7 @@ func TestScanVulnerableProject(t *testing.T) {
 	warn, err := svc.Patrol(config.PatrolConfig{
 		Locations:             []config.ProjectLocation{{Type: config.Gitlab, Path: "group/to/scan"}},
 		ReportToEmails:        []string{},
-		ReportToSlackChannel:  "channel",
+		ReportToSlackChannels: []string{"channel"},
 		ReportToIssue:         true,
 		EnableProjectReportTo: true,
 		Verbose:               true,

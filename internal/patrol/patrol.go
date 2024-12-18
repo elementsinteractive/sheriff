@@ -73,11 +73,12 @@ func (s *sheriffService) Patrol(args config.PatrolConfig) (warn error, err error
 	}
 
 	if s.slackService != nil {
-		if args.ReportToSlackChannel != "" {
-			log.Info().Str("slackChannel", args.ReportToSlackChannel).Msg("Posting report to slack channel")
+		if len(args.ReportToSlackChannels) > 0 {
+			// TODO #36 support sending to multiple slack channels (for now only the first is sent)
+			log.Info().Str("slackChannel", args.ReportToSlackChannels[0]).Msg("Posting report to slack channel")
 
 			paths := pie.Map(args.Locations, func(v config.ProjectLocation) string { return v.Path })
-			if err := publish.PublishAsGeneralSlackMessage(args.ReportToSlackChannel, scanReports, paths, s.slackService); err != nil {
+			if err := publish.PublishAsGeneralSlackMessage(args.ReportToSlackChannels[0], scanReports, paths, s.slackService); err != nil {
 				log.Error().Err(err).Msg("Failed to post slack report")
 				err = errors.Join(errors.New("failed to post slack report"), err)
 				warn = errors.Join(err, warn)

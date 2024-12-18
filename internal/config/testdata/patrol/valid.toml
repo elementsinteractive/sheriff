@@ -1,10 +1,10 @@
-urls = ["gitlab://group1", "gitlab://group2/project1"]
+targets = ["gitlab://group1", "gitlab://group2/project1"]
 
 [report]
 silent = true
 
 [report.to]
 emails = ["some-email@gmail.com"]
-slack-channel = "report-slack-channel"
+slack-channels = ["report-slack-channel"]
 issue = true
 enable-project-report-to = true
