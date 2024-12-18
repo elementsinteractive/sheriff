@@ -25,7 +25,28 @@ func TestPublishAsGeneralSlackMessage(t *testing.T) {
 		},
 	}
 
-	err := PublishAsGeneralSlackMessage("channel", report, []string{"path/to/group", "path/to/project"}, mockSlackService)
+	err := PublishAsGeneralSlackMessage([]string{"channel"}, report, []string{"path/to/group", "path/to/project"}, mockSlackService)
+
+	assert.Nil(t, err)
+	mockSlackService.AssertExpectations(t)
+}
+
+func TestPublishAsGeneralSlackMessageToMultipleChannel(t *testing.T) {
+	mockSlackService := &mockSlackService{}
+	mockSlackService.On("PostMessage", "channel1", mock.Anything).Return("", nil)
+	mockSlackService.On("PostMessage", "channel2", mock.Anything).Return("", nil)
+	report := []scanner.Report{
+		{
+			IsVulnerable: true,
+			Vulnerabilities: []scanner.Vulnerability{
+				{
+					Id: "CVE-2021-1234",
+				},
+			},
+		},
+	}
+
+	err := PublishAsGeneralSlackMessage([]string{"channel1", "channel2"}, report, []string{"path/to/group", "path/to/project"}, mockSlackService)
 
 	assert.Nil(t, err)
 	mockSlackService.AssertExpectations(t)
