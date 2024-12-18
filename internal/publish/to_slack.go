@@ -1,11 +1,12 @@
 package publish
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"sheriff/internal/scanner"
 	"sheriff/internal/slack"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -235,8 +236,8 @@ func getSeverityScoreOrder(thresholds map[scanner.SeverityScoreKind]float64) []s
 	for kind := range thresholds {
 		kinds = append(kinds, kind)
 	}
-	sort.Slice(kinds, func(i, j int) bool {
-		return thresholds[kinds[i]] > thresholds[kinds[j]]
+	slices.SortFunc(kinds, func(a, b scanner.SeverityScoreKind) int {
+		return cmp.Compare(thresholds[b], thresholds[a])
 	})
 
 	return kinds

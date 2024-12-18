@@ -2,6 +2,7 @@
 package patrol
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -11,12 +12,12 @@ import (
 	"sheriff/internal/publish"
 	"sheriff/internal/scanner"
 	"sheriff/internal/slack"
-	"sort"
 	"sync"
 
 	"github.com/elliotchance/pie/v2"
 	"github.com/rs/zerolog/log"
 	gogitlab "github.com/xanzy/go-gitlab"
+	"golang.org/x/exp/slices"
 )
 
 const tempScanDir = "tmp_scans"
@@ -147,8 +148,8 @@ func (s *sheriffService) scanAndGetReports(locations []config.ProjectLocation) (
 		reports = append(reports, r)
 	}
 
-	sort.Slice(reports, func(i int, j int) bool {
-		return len(reports[i].Vulnerabilities) > len(reports[j].Vulnerabilities)
+	slices.SortFunc(reports, func(a, b scanner.Report) int {
+		return cmp.Compare(len(b.Vulnerabilities), len(a.Vulnerabilities))
 	})
 
 	return

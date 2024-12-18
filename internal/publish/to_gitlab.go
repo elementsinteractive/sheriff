@@ -14,7 +14,7 @@ import (
 )
 
 // severityScoreOrder represents the order of SeverityScoreKind by their score in descending order
-// which is how we want to display it in the
+// which is how we want to display it in the Issue report
 var severityScoreOrder = getSeverityScoreOrder(scanner.SeverityScoreThresholds)
 
 // now is a function that returns the current time
