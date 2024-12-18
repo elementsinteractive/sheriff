@@ -74,6 +74,7 @@ func (s *sheriffService) Patrol(args config.PatrolConfig) (warn error, err error
 
 	if s.slackService != nil {
 		if len(args.ReportToSlackChannels) > 0 {
+			log.Info().Str("slackChannel", args.ReportToSlackChannels[0]).Msg("Posting report to slack channel")
 			paths := pie.Map(args.Locations, func(v config.ProjectLocation) string { return v.Path })
 			if err := publish.PublishAsGeneralSlackMessage(args.ReportToSlackChannels, scanReports, paths, s.slackService); err != nil {
 				log.Error().Err(err).Msg("Failed to post slack report to some channels")
