@@ -36,8 +36,11 @@ func PublishAsGeneralSlackMessage(channelNames []string, reports []scanner.Repor
 	var outErr error
 	for err := range errChan {
 		if err != nil {
-			outErr = errors.Join(errors.New("errors occured when posting to slack channel"), err)
+			outErr = errors.Join(err, outErr)
 		}
+	}
+	if outErr != nil {
+		outErr = errors.Join(errors.New("errors occured when posting to slack channel"), outErr)
 	}
 
 	return outErr
