@@ -33,7 +33,11 @@ func PublishAsGeneralSlackMessage(channelNames []string, reports []scanner.Repor
 	wg.Wait()
 	close(errChan)
 
-	outErr := errors.Join(<-errChan)
+	var outErr error
+	for err := range errChan {
+		outErr = errors.Join(err, outErr)
+	}
+
 	return outErr
 }
 
