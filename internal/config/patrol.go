@@ -66,8 +66,9 @@ func GetPatrolConfiguration(cliOpts PatrolCLIOpts) (config PatrolConfig, err err
 	if cliOpts.Config != "" {
 		found, err := getTOMLFile(cliOpts.Config, &tomlOpts)
 		if !found {
-			return config, fmt.Errorf("failed to find configuration file %v", cliOpts.Config)
-		} else if err != nil {
+			zerolog.Info().Msg("No configuration file found, running with CLI options only")
+		}
+		if err != nil {
 			return config, errors.Join(errors.New("failed to parse patrol configuration file"), err)
 		}
 

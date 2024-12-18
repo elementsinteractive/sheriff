@@ -73,7 +73,8 @@ func TestGetPatrolConfigurationInexistentFile(t *testing.T) {
 		Verbose: true,
 	})
 
-	assert.NotNil(t, err)
+	// It is allowed to run sheriff without a configuration file
+	assert.Nil(t, err)
 }
 
 func TestParseUrls(t *testing.T) {
