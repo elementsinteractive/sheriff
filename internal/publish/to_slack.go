@@ -16,7 +16,7 @@ import (
 )
 
 // PublishAsGeneralSlackMessage publishes a report of the vulnerabilities scanned to a list of slack channels
-func PublishAsGeneralSlackMessage(channelNames []string, reports []scanner.Report, paths []string, s slack.IService) (err error) {
+func PublishAsGeneralSlackMessage(channelNames []string, reports []scanner.Report, paths []string, s slack.IService) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(channelNames))
 	for _, slackChannel := range channelNames {
@@ -33,16 +33,7 @@ func PublishAsGeneralSlackMessage(channelNames []string, reports []scanner.Repor
 	wg.Wait()
 	close(errChan)
 
-	var outErr error
-	for err := range errChan {
-		if err != nil {
-			outErr = errors.Join(err, outErr)
-		}
-	}
-	if outErr != nil {
-		outErr = errors.Join(errors.New("errors occured when posting to slack channel"), outErr)
-	}
-
+	outErr := errors.Join(<-errChan)
 	return outErr
 }
 
