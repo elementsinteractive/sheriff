@@ -52,8 +52,9 @@ type Report struct {
 	ProjectConfig   config.ProjectConfig // Contains the project-level configuration that users of sheriff may have in their repository
 	IsVulnerable    bool
 	Vulnerabilities []Vulnerability
-	IssueUrl        string // URL of the GitLab issue. Conditionally set if --gitlab-issue is passed
-	Error           bool   // Conditionally set if an error occurred during the scan
+	IssueUrl        string   // URL of the GitLab issue. Conditionally set if --gitlab-issue is passed
+	Error           bool     // Conditionally set if an error occurred during the scan
+	OutdatedAcks    []string // Vulnerabilities in the project configuration that are no longer present in the report
 }
 
 // VulnScanner is an interface for any vulnerability scanner

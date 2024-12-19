@@ -88,6 +88,23 @@ func formatGitlabIssue(r scanner.Report) (mdReport string) {
 		}
 	}
 
+	// Add outdated acknowledgements section
+	mdReport += formatOutdatedAcks(r.OutdatedAcks)
+
+	return
+}
+
+// formatOutdatedAcks formats the outdated acknowledgements as a markdown section
+func formatOutdatedAcks(outdatedAcks []string) (md string) {
+	if len(outdatedAcks) == 0 {
+		return
+	}
+
+	md = "\n\n-------\n\n### Outdated Acknowledgements\n"
+	md += "\n💡 These vulnerabilities were acknowledged in the project configuration but are no longer relevant.\n\n"
+	for _, ack := range outdatedAcks {
+		md += fmt.Sprintf("- `%v`\n", ack)
+	}
 	return
 }
 

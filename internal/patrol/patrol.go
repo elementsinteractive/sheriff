@@ -184,6 +184,7 @@ func (s *sheriffService) scanProject(project gogitlab.Project) (report *scanner.
 	r.ProjectConfig = config
 
 	markVulnsAsAcknowledgedInReport(&r, config)
+	markOutdatedAcknowledgements(&r, config)
 	return &r, nil
 }
 
@@ -205,6 +206,24 @@ func markVulnsAsAcknowledgedInReport(report *scanner.Report, config config.Proje
 			if _, ok := AckReasons[v.Id]; ok {
 				report.Vulnerabilities[i].AckReason = AckReasons[v.Id]
 			}
+		}
+	}
+}
+
+// markOutdatedAcknowledgements marks configured acknowledged vulnerabilities as outdated in the report
+// A vulnerability is "outdated" if it is no longer present in the report.
+func markOutdatedAcknowledgements(report *scanner.Report, config config.ProjectConfig) {
+	for _, ack := range config.Acknowledged {
+		found := false
+		for _, v := range report.Vulnerabilities {
+			if v.Id == ack.Code {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Info().Str("ack", ack.Code).Msg("Acknowledged vulnerability is outdated")
+			report.OutdatedAcks = append(report.OutdatedAcks, ack.Code)
 		}
 	}
 }

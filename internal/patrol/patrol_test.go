@@ -155,6 +155,37 @@ func TestMarkVulnsAsAcknowledgedInReport(t *testing.T) {
 	assert.Equal(t, scanner.Critical, report.Vulnerabilities[1].SeverityScoreKind)
 }
 
+func TestMarkOutdatedAcknowledgements(t *testing.T) {
+	report := scanner.Report{
+		Vulnerabilities: []scanner.Vulnerability{
+			{
+				Id:                "CVE-1",
+				SeverityScoreKind: scanner.Critical,
+			},
+
+			{
+				Id:                "CVE-2",
+				SeverityScoreKind: scanner.Critical,
+			},
+		},
+	}
+	config := config.ProjectConfig{
+		Acknowledged: []config.AcknowledgedVuln{
+			{
+				Code: "CVE-1", // still relevant
+			},
+
+			{
+				Code: "CVE-3", // not in report (outdated)
+			},
+		},
+	}
+
+	markOutdatedAcknowledgements(&report, config)
+
+	assert.Equal(t, []string{"CVE-3"}, report.OutdatedAcks)
+}
+
 type mockGitlabService struct {
 	mock.Mock
 }
