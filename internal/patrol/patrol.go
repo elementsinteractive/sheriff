@@ -213,15 +213,12 @@ func markVulnsAsAcknowledgedInReport(report *scanner.Report, config config.Proje
 // markOutdatedAcknowledgements marks configured acknowledged vulnerabilities as outdated in the report
 // A vulnerability is "outdated" if it is no longer present in the report.
 func markOutdatedAcknowledgements(report *scanner.Report, config config.ProjectConfig) {
+	var vulnCodes = make(map[string]bool, len(report.Vulnerabilities))
+	for _, vuln := range report.Vulnerabilities {
+		vulnCodes[vuln.Id] = true
+	}
 	for _, ack := range config.Acknowledged {
-		found := false
-		for _, v := range report.Vulnerabilities {
-			if v.Id == ack.Code {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !vulnCodes[ack.Code] {
 			log.Info().Str("ack", ack.Code).Msg("Acknowledged vulnerability is outdated")
 			report.OutdatedAcks = append(report.OutdatedAcks, ack.Code)
 		}
