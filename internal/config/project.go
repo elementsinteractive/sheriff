@@ -29,5 +29,9 @@ func GetProjectConfiguration(projectName string, dir string) (config ProjectConf
 		log.Info().Str("project", projectName).Msg("No project configuration found. Using default")
 	}
 
+	if config.SlackChannel != "" {
+		config.ReportToSlackChannel = config.SlackChannel
+	}
+
 	return
 }
