@@ -12,7 +12,7 @@ func TestGetConfiguration(t *testing.T) {
 		foldername string
 		wantConfig ProjectConfig
 	}{
-		{"valid", ProjectConfig{ReportToSlackChannel: "the-devils-slack-channel"}},
+		{"valid", ProjectConfig{Report: ProjectReport{To: ProjectReportTo{SlackChannel: "the-devils-slack-channel"}}}},
 		{"invalid", ProjectConfig{}},
 		{"nonexistent", ProjectConfig{}},
 		{"valid_with_ack", ProjectConfig{Acknowledged: []AcknowledgedVuln{{Code: "CSV111", Reason: "not relevant"}, {Code: "CSV222", Reason: ""}}}},

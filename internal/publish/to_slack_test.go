@@ -62,7 +62,7 @@ func TestPublishAsSpecificChannelSlackMessage(t *testing.T) {
 				Id: "CVE-2021-1234",
 			},
 		},
-		ProjectConfig: config.ProjectConfig{ReportToSlackChannel: "channel"},
+		ProjectConfig: config.ProjectConfig{Report: config.ProjectReport{To: config.ProjectReportTo{SlackChannel: "channel"}}},
 	}
 
 	_ = PublishAsSpecificChannelSlackMessage([]scanner.Report{report}, mockSlackService)

@@ -13,10 +13,18 @@ type AcknowledgedVuln struct {
 	Reason string `toml:"reason"`
 }
 
+type ProjectReportTo struct {
+	SlackChannel string `toml:"slack-channel"`
+}
+
+type ProjectReport struct {
+	To ProjectReportTo `toml:"to"`
+}
+
 type ProjectConfig struct {
-	ReportToSlackChannel string             `toml:"report-to-slack-channel"`
-	SlackChannel         string             `toml:"slack-channel"` // TODO #27: Break in v1.0. Kept for backwards-compatibility
-	Acknowledged         []AcknowledgedVuln `toml:"acknowledged"`
+	Report       ProjectReport      `toml:"report"`
+	SlackChannel string             `toml:"slack-channel"` // TODO #27: Break in v1.0. Kept for backwards-compatibility
+	Acknowledged []AcknowledgedVuln `toml:"acknowledged"`
 }
 
 func GetProjectConfiguration(projectName string, dir string) (config ProjectConfig) {
@@ -30,7 +38,7 @@ func GetProjectConfiguration(projectName string, dir string) (config ProjectConf
 	}
 
 	if config.SlackChannel != "" {
-		config.ReportToSlackChannel = config.SlackChannel
+		config.Report.To.SlackChannel = config.SlackChannel
 	}
 
 	return
