@@ -106,7 +106,7 @@ commitizen:
   name: cz_customize
   tag_format: v$version
   update_changelog_on_bump: false
-  version: 0.24.2
+  version: 0.24.3
   version_files:
   - internal/cli/app.go:Version
   - gitlab/templates/sheriff.gitlab-ci.yml:sheriff:v

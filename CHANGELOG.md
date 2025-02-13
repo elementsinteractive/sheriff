@@ -1,3 +1,9 @@
+## v0.24.3 (2025-02-13)
+
+### Fix
+
+- close gitlab issue with iid
+
 ## v0.24.2 (2025-02-13)
 
 ### Fix
