@@ -1,3 +1,9 @@
+## v0.24.2 (2025-02-13)
+
+### Fix
+
+- scan directory should use slug
+
 ## v0.24.1 (2025-02-10)
 
 ### Fix
