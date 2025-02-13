@@ -204,6 +204,10 @@ func formatReportMessage(reportsBySeverityKind map[scanner.SeverityScoreKind][]s
 	}
 
 	textString := text.String()
+	if len(textString) == 0 {
+		return
+	}
+
 	// Slack has a 3001 character limit for messages
 	splitText := splitMessage(textString, 3000)
 

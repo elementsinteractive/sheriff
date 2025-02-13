@@ -119,12 +119,12 @@ func TestGetProjectListWithNextPage(t *testing.T) {
 
 func TestCloseVulnerabilityIssue(t *testing.T) {
 	mockClient := mockClient{}
-	mockClient.On("ListProjectIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*gitlab.Issue{{State: "opened"}}, nil, nil)
-	mockClient.On("UpdateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gitlab.Issue{State: "closed"}, nil, nil)
+	mockClient.On("ListProjectIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*gitlab.Issue{{IID: 2, State: "opened"}}, nil, nil)
+	mockClient.On("UpdateIssue", 1, 2, mock.Anything, mock.Anything).Return(&gitlab.Issue{State: "closed"}, nil, nil)
 
 	svc := gitlabService{client: &mockClient}
 
-	err := svc.CloseVulnerabilityIssue(repository.Project{})
+	err := svc.CloseVulnerabilityIssue(repository.Project{ID: 1})
 
 	assert.Nil(t, err)
 	mockClient.AssertExpectations(t)

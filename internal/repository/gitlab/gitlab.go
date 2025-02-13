@@ -60,7 +60,7 @@ func (s gitlabService) CloseVulnerabilityIssue(project repository.Project) (err 
 		return
 	}
 
-	issue, _, err = s.client.UpdateIssue(project.ID, issue.ID, &gitlab.UpdateIssueOptions{
+	issue, _, err = s.client.UpdateIssue(project.ID, issue.IID, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("close"),
 	})
 	if err != nil {
