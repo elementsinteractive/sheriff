@@ -320,6 +320,7 @@ func mapProject(p gitlab.Project) repository.Project {
 	return repository.Project{
 		ID:         p.ID,
 		Name:       p.Name,
+		Slug:       p.Path,
 		Path:       p.PathWithNamespace,
 		WebURL:     p.WebURL,
 		RepoUrl:    p.HTTPURLToRepo,

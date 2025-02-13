@@ -191,6 +191,7 @@ func mapGithubProject(r github.Repository) repository.Project {
 		ID:         int(valueOrEmpty(r.ID)),
 		Name:       valueOrEmpty(r.Name),
 		Path:       valueOrEmpty(r.FullName),
+		Slug:       valueOrEmpty(r.Name),
 		WebURL:     valueOrEmpty(r.HTMLURL),
 		RepoUrl:    valueOrEmpty(r.HTMLURL),
 		Repository: repository.Github,

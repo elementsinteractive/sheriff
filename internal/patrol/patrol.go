@@ -179,7 +179,7 @@ func (s *sheriffService) getProjectList(locs []config.ProjectLocation) (projects
 
 // scanProject scans a project for vulnerabilities using the osv scanner.
 func (s *sheriffService) scanProject(project repository.Project) (report *scanner.Report, err error) {
-	dir, err := os.MkdirTemp(tempScanDir, fmt.Sprintf("%v-", project.Name))
+	dir, err := os.MkdirTemp(tempScanDir, fmt.Sprintf("%v-", project.Slug))
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to create project temporary directory"), err)
 	}

@@ -12,6 +12,7 @@ const (
 type Project struct {
 	ID         int
 	Name       string
+	Slug       string
 	Path       string
 	WebURL     string
 	RepoUrl    string
