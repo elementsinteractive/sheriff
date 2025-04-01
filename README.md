@@ -6,6 +6,7 @@
 # Sheriff
 
 Sheriff is a tool to scan repositories and generate security reports.
+foo
 
 - [Quick Usage](#quick-usage)
 - [How it works](#how-it-works)
