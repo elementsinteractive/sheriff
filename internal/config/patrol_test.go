@@ -10,6 +10,7 @@ import (
 func TestGetPatrolConfiguration(t *testing.T) {
 	want := PatrolConfig{
 		Locations:             []ProjectLocation{{Type: repository.Gitlab, Path: "group1"}, {Type: repository.Gitlab, Path: "group2/project1"}},
+		Ignored:               []ProjectLocation{},
 		ReportToEmails:        []string{"some-email@gmail.com"},
 		ReportToSlackChannels: []string{"report-slack-channel"},
 		ReportToIssue:         true,
@@ -30,6 +31,7 @@ func TestGetPatrolConfiguration(t *testing.T) {
 func TestGetPatrolConfigurationCLIOverridesFile(t *testing.T) {
 	want := PatrolConfig{
 		Locations:             []ProjectLocation{{Type: repository.Gitlab, Path: "group1"}, {Type: repository.Gitlab, Path: "group2/project1"}},
+		Ignored:               []ProjectLocation{},
 		ReportToEmails:        []string{"email@gmail.com", "other@gmail.com"},
 		ReportToSlackChannels: []string{"other-slack-channel"},
 		ReportToIssue:         false,

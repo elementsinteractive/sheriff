@@ -16,6 +16,7 @@ type ProjectLocation struct {
 
 type PatrolConfig struct {
 	Locations             []ProjectLocation
+	Ignored               []ProjectLocation
 	ReportToEmails        []string
 	ReportToSlackChannels []string
 	ReportToIssue         bool
@@ -39,6 +40,7 @@ type PatrolReportOpts struct {
 
 type PatrolCommonOpts struct {
 	Targets *[]string        `toml:"targets"`
+	Ignored *[]string        `toml:"ignored"`
 	Report  PatrolReportOpts `toml:"report"`
 }
 
@@ -86,6 +88,12 @@ func mergeConfigs(cliOpts PatrolCLIOpts, fileOpts PatrolFileOpts) (config Patrol
 		return config, errors.Join(errors.New("could not parse targets from CLI options"), err)
 	}
 
+	ignored := getCliOrFileOption(cliOpts.Ignored, fileOpts.Ignored, []string{})
+	parsedIgnored, err := parseTargets(ignored)
+	if err != nil {
+		return config, errors.Join(errors.New("could not parse targets from CLI options"), err)
+	}
+
 	config = PatrolConfig{
 		Locations:             parsedLocations,
 		ReportToIssue:         getCliOrFileOption(cliOpts.Report.To.Issue, fileOpts.Report.To.Issue, false),
@@ -94,6 +102,7 @@ func mergeConfigs(cliOpts PatrolCLIOpts, fileOpts PatrolFileOpts) (config Patrol
 		EnableProjectReportTo: getCliOrFileOption(cliOpts.Report.To.EnableProjectReportTo, fileOpts.Report.To.EnableProjectReportTo, false),
 		SilentReport:          getCliOrFileOption(cliOpts.Report.SilentReport, fileOpts.Report.SilentReport, false),
 		Verbose:               cliOpts.Verbose,
+		Ignored:               parsedIgnored,
 	}
 
 	return

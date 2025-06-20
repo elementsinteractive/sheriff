@@ -47,7 +47,7 @@ func New(repoService provider.IProvider, slackService slack.IService, osvService
 
 // Patrol scans the given Gitlab groups and projects, creates and publishes the necessary reports.
 func (s *sheriffService) Patrol(args config.PatrolConfig) (warn error, err error) {
-	scanReports, swarn, err := s.scanAndGetReports(args.Locations)
+	scanReports, swarn, err := s.scanAndGetReports(args.Locations, args.Ignored)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to scan projects"), err)
 	}
@@ -96,7 +96,7 @@ func (s *sheriffService) Patrol(args config.PatrolConfig) (warn error, err error
 	return warn, nil
 }
 
-func (s *sheriffService) scanAndGetReports(locations []config.ProjectLocation) (reports []scanner.Report, warn error, err error) {
+func (s *sheriffService) scanAndGetReports(locations []config.ProjectLocation, ignored []config.ProjectLocation) (reports []scanner.Report, warn error, err error) {
 	// Create a temporary directory to store the scans
 	err = os.MkdirAll(tempScanDir, os.ModePerm)
 	if err != nil {
@@ -105,7 +105,7 @@ func (s *sheriffService) scanAndGetReports(locations []config.ProjectLocation) (
 	defer os.RemoveAll(tempScanDir)
 	log.Info().Str("path", tempScanDir).Msg("Created temporary directory")
 
-	projects, pwarn := s.getProjectList(locations)
+	projects, pwarn := s.getProjectList(locations, ignored)
 	if pwarn != nil {
 		pwarn = errors.Join(errors.New("errors occured when getting project list"), pwarn)
 		warn = errors.Join(pwarn, warn)
@@ -144,7 +144,18 @@ func (s *sheriffService) scanAndGetReports(locations []config.ProjectLocation) (
 	return
 }
 
-func (s *sheriffService) getProjectList(locs []config.ProjectLocation) (projects []repository.Project, warn error) {
+func (s *sheriffService) getProjectList(locs []config.ProjectLocation, ignored []config.ProjectLocation) (projects []repository.Project, warn error) {
+	// Filter out locations that are in the ignored list
+	locs = pie.Filter(locs, func(loc config.ProjectLocation) bool {
+		return !slices.ContainsFunc(ignored, func(ignoredPath config.ProjectLocation) bool {
+			ignore := ignoredPath.Path == loc.Path && ignoredPath.Type == loc.Type
+			if ignore {
+				log.Info().Str("path", loc.Path).Msg("Ignoring project location as it is in the ignored list")
+			}
+			return ignore
+		})
+	})
+
 	gitlabLocs := pie.Map(
 		pie.Filter(locs, func(loc config.ProjectLocation) bool { return loc.Type == repository.Gitlab }),
 		func(loc config.ProjectLocation) string { return loc.Path },

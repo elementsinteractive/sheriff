@@ -25,6 +25,7 @@ type ProjectConfig struct {
 	Report       ProjectReport      `toml:"report"`
 	SlackChannel string             `toml:"slack-channel"` // TODO #27: Break in v1.0. Kept for backwards-compatibility
 	Acknowledged []AcknowledgedVuln `toml:"acknowledged"`
+	Ignored      []string           `toml:"ignored"` // List of repositories or groups to ignore
 }
 
 func GetProjectConfiguration(projectName string, dir string) (config ProjectConfig) {

@@ -192,6 +192,25 @@ func TestMarkOutdatedAcknowledgements(t *testing.T) {
 	assert.Equal(t, []string{"CVE-3"}, report.OutdatedAcks)
 }
 
+func TestGetProjectList_IgnoresProject(t *testing.T) {
+	mockClient := &mockClient{}
+	mockClient.On("GetProjectList", []string{"group/to/scan"}).Return([]repository.Project{{Name: "Hello World", RepoUrl: "https://gitlab.com/group/to/scan.git", Repository: repository.Gitlab}}, nil)
+
+	mockRepoService := &mockRepoService{}
+	mockRepoService.On("Provide", repository.Gitlab).Return(mockClient)
+
+	svc := New(mockRepoService, nil, nil)
+
+	// The ignored list contains the project path, so it should be filtered out
+	projects, warn := svc.(*sheriffService).getProjectList(
+		[]config.ProjectLocation{{Type: repository.Gitlab, Path: "group/to/scan"}},
+		[]config.ProjectLocation{{Type: repository.Gitlab, Path: "group/to/scan"}},
+	)
+	assert.Nil(t, warn)
+	assert.Empty(t, projects)
+	mockClient.AssertNotCalled(t, "GetProjectList", []string{"group/to/scan"})
+}
+
 type mockRepoService struct {
 	mock.Mock
 }
