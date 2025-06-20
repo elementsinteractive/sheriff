@@ -1,3 +1,13 @@
+## v0.25.1 (2025-06-20)
+
+### Fix
+
+- **deps**: move to new gitlab dep
+
+### Technical
+
+- **deps**: update dependencies
+
 ## v0.25.0 (2025-06-20)
 
 ### Feat
