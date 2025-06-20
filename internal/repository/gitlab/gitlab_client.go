@@ -6,7 +6,7 @@ package gitlab
 // As such this MUST be as thin as possible and MUST not contain any business logic, since it is not testable.
 
 import (
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 type iclient interface {
