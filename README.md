@@ -25,6 +25,7 @@ Sheriff is a tool to scan repositories and generate security reports.
       - [verbose](#verbose)
     - [Scanning](#scanning)
       - [targets](#targets)
+      - [ignored](#ignored)
     - [Reporting](#reporting)
       - [report to issue](#report-to-issue)
       - [report to email (TODO #12)](#report-to-email-todo-12)
@@ -165,6 +166,19 @@ The expected format of a target is `platform://path/to/your/group-or-project`
 
 For example:
 `--target gitlab://namespace/group --target github://organization/project`
+
+##### ignored
+
+| CLI options | File config |
+|---|---|
+| (repeatable) `--ignore` | `ignored` |
+
+Sets the list of groups and projects to be ignored from scanning.
+Useful when you have a `target` which is a group, but you want to ignore a specific project from that group.
+The expected format of a target is `platform://path/to/your/group-or-project`
+
+For example:
+`--ignore gitlab://namespace/group --ignore github://organization/project`
 
 #### Reporting
 

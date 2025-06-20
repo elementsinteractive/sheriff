@@ -27,6 +27,7 @@ const (
 const configFlag = "config"
 const verboseFlag = "verbose"
 const targetFlag = "target"
+const ignoreFlag = "ignore"
 const reportToEmailFlag = "report-to-email"
 const reportToIssueFlag = "report-to-issue"
 const reportToSlackChannel = "report-to-slack-channel"
@@ -54,6 +55,11 @@ var PatrolFlags = []cli.Flag{
 	&cli.StringSliceFlag{
 		Name:     targetFlag,
 		Usage:    "Groups and projects to scan for vulnerabilities (list argument which can be repeated)",
+		Category: string(Scanning),
+	},
+	&cli.StringSliceFlag{
+		Name:     ignoreFlag,
+		Usage:    "List of repositories or groups to ignore (list argument which can be repeated)",
 		Category: string(Scanning),
 	},
 	&cli.StringSliceFlag{
@@ -110,6 +116,7 @@ func PatrolAction(cCtx *cli.Context) error {
 	config, err := config.GetPatrolConfiguration(config.PatrolCLIOpts{
 		PatrolCommonOpts: config.PatrolCommonOpts{
 			Targets: getStringSliceIfSet(cCtx, targetFlag),
+			Ignored: getStringSliceIfSet(cCtx, ignoreFlag),
 			Report: config.PatrolReportOpts{
 				To: config.PatrolReportToOpts{
 					Issue:                 getBoolIfSet(cCtx, reportToIssueFlag),
