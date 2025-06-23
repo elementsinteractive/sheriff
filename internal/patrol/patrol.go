@@ -145,17 +145,6 @@ func (s *sheriffService) scanAndGetReports(locations []config.ProjectLocation, i
 }
 
 func (s *sheriffService) getProjectList(locs []config.ProjectLocation, ignored []config.ProjectLocation) (projects []repository.Project, warn error) {
-	// Filter out locations that are in the ignored list
-	locs = pie.Filter(locs, func(loc config.ProjectLocation) bool {
-		return !slices.ContainsFunc(ignored, func(ignoredPath config.ProjectLocation) bool {
-			ignore := ignoredPath.Path == loc.Path && ignoredPath.Type == loc.Type
-			if ignore {
-				log.Info().Str("path", loc.Path).Msg("Ignoring project location as it is in the ignored list")
-			}
-			return ignore
-		})
-	})
-
 	gitlabLocs := pie.Map(
 		pie.Filter(locs, func(loc config.ProjectLocation) bool { return loc.Type == repository.Gitlab }),
 		func(loc config.ProjectLocation) string { return loc.Path },
@@ -184,6 +173,17 @@ func (s *sheriffService) getProjectList(locs []config.ProjectLocation, ignored [
 
 		projects = append(projects, githubProjects...)
 	}
+
+	// Filter out locations that are in the ignored list
+	projects = pie.Filter(projects, func(project repository.Project) bool {
+		return !slices.ContainsFunc(ignored, func(ignoredPath config.ProjectLocation) bool {
+			ignore := ignoredPath.Path == project.Path && ignoredPath.Type == project.Repository
+			if ignore {
+				log.Info().Str("path", project.Path).Msg("Ignoring project location as it is in the ignored list")
+			}
+			return ignore
+		})
+	})
 
 	return
 }
