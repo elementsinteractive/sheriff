@@ -1,3 +1,9 @@
+## v0.25.3 (2025-06-23)
+
+### Fix
+
+- ignore fetched projects with ignore list
+
 ## v0.25.2 (2025-06-20)
 
 ### Technical
