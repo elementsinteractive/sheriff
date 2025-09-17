@@ -19,7 +19,7 @@ const (
 	AdvisoryKind   osvReferenceKind = "ADVISORY"
 	WebKind        osvReferenceKind = "WEB"
 	PackageKind    osvReferenceKind = "PACKAGE"
-	osvTimeout                      = 30 * time.Second
+	osvTimeout                      = 5 * time.Minute
 )
 
 type osvSource struct {
