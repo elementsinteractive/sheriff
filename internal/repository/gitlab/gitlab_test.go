@@ -202,13 +202,13 @@ func TestDereferenceProjectsPointers(t *testing.T) {
 	assert.Equal(t, 2, dereferencedProjects[1].ID)
 	assert.Equal(t, 2, errCount)
 }
-func TestCloneCompleteFlow(t *testing.T) {
+func TestDownloadRepository(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "sheriff-clone-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	stubArchive, err := os.ReadFile("testdata/sample-archive.tar.gz")
+	stubArchive, err := os.ReadFile("../testdata/sample-archive.tar.gz")
 	require.NoError(t, err)
 
 	mockClient := mockClient{}
@@ -223,7 +223,7 @@ func TestCloneCompleteFlow(t *testing.T) {
 		Path: "group/project",
 	}
 
-	err = svc.Clone(testProject, tempDir)
+	err = svc.DownloadRepository(testProject, tempDir)
 
 	// Verify no errors
 	assert.NoError(t, err)
