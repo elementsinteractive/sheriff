@@ -140,7 +140,7 @@ func (s gitlabService) Clone(url string, dir string) (err error) {
 	}
 
 	// Extract archive to directory
-	return s.extractTarGz(strings.NewReader(string(archiveData)), dir)
+	return s.extractTarGz(bytes.NewReader(archiveData), dir)
 }
 
 // This function receives a list of paths which can be gitlab projects or groups
