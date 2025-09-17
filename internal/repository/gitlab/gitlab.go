@@ -421,12 +421,11 @@ func (s gitlabService) extractTarGz(reader io.Reader, destDir string) error {
 			if err != nil {
 				return fmt.Errorf("failed to create file %s: %w", targetPath, err)
 			}
+			defer file.Close()
 
 			if _, err := io.Copy(file, tarReader); err != nil {
-				file.Close()
 				return fmt.Errorf("failed to write file %s: %w", targetPath, err)
 			}
-			file.Close()
 		}
 	}
 
