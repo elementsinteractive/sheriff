@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"net/http"
-	"os"
 	"sheriff/internal/compress"
 	"sheriff/internal/repository"
 	"strings"
@@ -114,11 +113,6 @@ func (s githubService) DownloadRepository(project repository.Project, dir string
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download GitHub archive, status: %s", resp.Status)
-	}
-
-	// Create directory if it doesn't exist
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	return compress.ExtractTarGz(resp.Body, dir)

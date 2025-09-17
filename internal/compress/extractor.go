@@ -12,6 +12,10 @@ import (
 
 // ExtractTarGz extracts a tar.gz archive to the specified destination directory.
 func ExtractTarGz(reader io.Reader, destDir string) error {
+	if _, err := os.Stat(destDir); os.IsNotExist(err) {
+		return fmt.Errorf("destination directory does not exist: %s", destDir)
+	}
+
 	gzReader, err := gzip.NewReader(reader)
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)
