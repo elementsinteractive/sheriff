@@ -1,3 +1,23 @@
+## v0.25.6 (2025-09-17)
+
+### Fix
+
+- change interface of Clone
+- add small suggestion by lgtm
+- add security suggestion by lgtm
+
+### Refactor
+
+- **#52**: download repository archive instead of using git clone for GitLab
+
+### CI
+
+- fix lgtm reviewer workflow
+
+### Technical
+
+- add suggestion by lgtm
+
 ## v0.25.5 (2025-09-17)
 
 ### Fix
