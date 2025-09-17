@@ -2,11 +2,14 @@ package gitlab
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"sheriff/internal/repository"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
@@ -199,6 +202,46 @@ func TestDereferenceProjectsPointers(t *testing.T) {
 	assert.Equal(t, 2, dereferencedProjects[1].ID)
 	assert.Equal(t, 2, errCount)
 }
+func TestCloneCompleteFlow(t *testing.T) {
+	// Create temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "sheriff-clone-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	stubArchive, err := os.ReadFile("testdata/sample-archive.tar.gz")
+	require.NoError(t, err)
+
+	mockClient := mockClient{}
+	mockClient.On("Archive", 123, mock.Anything, mock.Anything).Return(stubArchive, &gitlab.Response{}, nil)
+
+	svc := gitlabService{client: &mockClient}
+
+	// Create a test project
+	testProject := repository.Project{
+		ID:   123,
+		Name: "test-project",
+		Path: "group/project",
+	}
+
+	err = svc.Clone(testProject, tempDir)
+
+	// Verify no errors
+	assert.NoError(t, err)
+	mockClient.AssertExpectations(t)
+
+	// Verify files were extracted correctly
+	readmeContent, err := os.ReadFile(filepath.Join(tempDir, "README.md"))
+	assert.NoError(t, err)
+	assert.Equal(t, "# Test Project\n\nThis is a test project for testing GitLab archive extraction.", string(readmeContent))
+
+	srcContent, err := os.ReadFile(filepath.Join(tempDir, "src", "main.go"))
+	assert.NoError(t, err)
+	assert.Equal(t, "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello from test project!\")\n}", string(srcContent))
+
+	// Verify directory structure
+	_, err = os.Stat(filepath.Join(tempDir, "src"))
+	assert.NoError(t, err, "src directory should exist")
+}
 
 type mockClient struct {
 	mock.Mock
@@ -247,4 +290,13 @@ func (c *mockClient) UpdateIssue(projectId interface{}, issueId int, opt *gitlab
 		r = args.Get(1).(*gitlab.Response)
 	}
 	return args.Get(0).(*gitlab.Issue), r, args.Error(2)
+}
+
+func (c *mockClient) Archive(pid interface{}, opt *gitlab.ArchiveOptions, options ...gitlab.RequestOptionFunc) ([]byte, *gitlab.Response, error) {
+	args := c.Called(pid, opt, options)
+	var r *gitlab.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*gitlab.Response)
+	}
+	return args.Get(0).([]byte), r, args.Error(2)
 }

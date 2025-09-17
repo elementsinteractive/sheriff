@@ -67,9 +67,9 @@ func (s githubService) OpenVulnerabilityIssue(project repository.Project, report
 	return nil, errors.New("OpenVulnerabilityIssue not yet implemented") // TODO #9 Add github support
 }
 
-func (s githubService) Clone(url string, dir string) (err error) {
+func (s githubService) Clone(project repository.Project, dir string) (err error) {
 	_, err = git.PlainClone(dir, false, &git.CloneOptions{
-		URL: url,
+		URL: project.RepoUrl,
 		Auth: &http.BasicAuth{
 			Username: "N/A",
 			Password: s.token,

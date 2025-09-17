@@ -15,6 +15,7 @@ type iclient interface {
 	ListProjectIssues(projectId interface{}, opt *gitlab.ListProjectIssuesOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Issue, *gitlab.Response, error)
 	CreateIssue(projectId interface{}, opt *gitlab.CreateIssueOptions, options ...gitlab.RequestOptionFunc) (*gitlab.Issue, *gitlab.Response, error)
 	UpdateIssue(projectId interface{}, issueId int, opt *gitlab.UpdateIssueOptions, options ...gitlab.RequestOptionFunc) (*gitlab.Issue, *gitlab.Response, error)
+	Archive(pid interface{}, opt *gitlab.ArchiveOptions, options ...gitlab.RequestOptionFunc) ([]byte, *gitlab.Response, error)
 }
 
 type client struct {
@@ -39,4 +40,8 @@ func (c *client) CreateIssue(projectId interface{}, opt *gitlab.CreateIssueOptio
 
 func (c *client) UpdateIssue(projectId interface{}, issueId int, opt *gitlab.UpdateIssueOptions, options ...gitlab.RequestOptionFunc) (*gitlab.Issue, *gitlab.Response, error) {
 	return c.client.Issues.UpdateIssue(projectId, issueId, opt, options...)
+}
+
+func (c *client) Archive(pid interface{}, opt *gitlab.ArchiveOptions, options ...gitlab.RequestOptionFunc) ([]byte, *gitlab.Response, error) {
+	return c.client.Repositories.Archive(pid, opt, options...)
 }

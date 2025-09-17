@@ -242,7 +242,7 @@ func (c *mockGitlabService) OpenVulnerabilityIssue(project repository.Project, r
 	return args.Get(0).(*repository.Issue), args.Error(1)
 }
 
-func (c *mockGitlabService) Clone(url string, dir string) error {
-	args := c.Called(url, dir)
+func (c *mockGitlabService) Clone(project repository.Project, dir string) error {
+	args := c.Called(project.RepoUrl, dir)
 	return args.Error(0)
 }
