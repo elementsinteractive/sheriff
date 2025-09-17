@@ -1,3 +1,9 @@
+## v0.25.5 (2025-09-17)
+
+### Fix
+
+- increase osv timeout to accomodate bigger projects
+
 ## v0.25.4 (2025-06-23)
 
 ### CI
