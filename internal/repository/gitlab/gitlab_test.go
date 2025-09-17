@@ -202,44 +202,28 @@ func TestDereferenceProjectsPointers(t *testing.T) {
 	assert.Equal(t, 2, dereferencedProjects[1].ID)
 	assert.Equal(t, 2, errCount)
 }
-
-func TestExtractProjectIDFromURL(t *testing.T) {
-	svc := gitlabService{}
-
-	// Test basic GitLab URL with .git suffix
-	result, err := svc.extractProjectIDFromURL("https://gitlab.com/group/project.git")
-	assert.NoError(t, err)
-	assert.Equal(t, "group/project", result)
-
-	// Test GitLab URL without .git suffix
-	result, err = svc.extractProjectIDFromURL("https://gitlab.com/group/project")
-	assert.NoError(t, err)
-	assert.Equal(t, "group/project", result)
-
-	// Test nested group project
-	result, err = svc.extractProjectIDFromURL("https://gitlab.com/group/subgroup/project.git")
-	assert.NoError(t, err)
-	assert.Equal(t, "group/subgroup/project", result)
-}
-
 func TestCloneCompleteFlow(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "sheriff-clone-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	// Load the stub tar.gz file
 	stubArchive, err := os.ReadFile("testdata/sample-archive.tar.gz")
 	require.NoError(t, err)
 
-	// Setup mock client
 	mockClient := mockClient{}
-	mockClient.On("Archive", "group/project", mock.Anything, mock.Anything).Return(stubArchive, &gitlab.Response{}, nil)
+	mockClient.On("Archive", 123, mock.Anything, mock.Anything).Return(stubArchive, &gitlab.Response{}, nil)
 
 	svc := gitlabService{client: &mockClient}
 
-	// Test the complete Clone flow
-	err = svc.Clone("https://gitlab.com/group/project.git", tempDir)
+	// Create a test project
+	testProject := repository.Project{
+		ID:   123,
+		Name: "test-project",
+		Path: "group/project",
+	}
+
+	err = svc.Clone(testProject, tempDir)
 
 	// Verify no errors
 	assert.NoError(t, err)

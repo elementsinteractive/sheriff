@@ -239,8 +239,8 @@ func (c *mockClient) OpenVulnerabilityIssue(project repository.Project, report s
 	return args.Get(0).(*repository.Issue), args.Error(1)
 }
 
-func (c *mockClient) Clone(url string, dir string) error {
-	args := c.Called(url, dir)
+func (c *mockClient) Clone(project repository.Project, dir string) error {
+	args := c.Called(project.RepoUrl, dir)
 	return args.Error(0)
 }
 

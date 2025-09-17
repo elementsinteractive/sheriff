@@ -2,11 +2,11 @@ package gitlab
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sheriff/internal/repository"
@@ -120,16 +120,8 @@ func (s gitlabService) OpenVulnerabilityIssue(project repository.Project, report
 	return
 }
 
-func (s gitlabService) Clone(url string, dir string) (err error) {
-	// Extract project ID from GitLab URL
-	projectID, err := s.extractProjectIDFromURL(url)
-	if err != nil {
-		return fmt.Errorf("failed to extract project ID from URL: %w", err)
-	}
-
-	log.Debug().Str("url", url).Str("extractedProjectID", projectID).Msg("Attempting to download archive")
-
-	archiveData, _, err := s.client.Archive(projectID, &gitlab.ArchiveOptions{})
+func (s gitlabService) Clone(project repository.Project, dir string) (err error) {
+	archiveData, _, err := s.client.Archive(project.ID, &gitlab.ArchiveOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to download archive: %w", err)
 	}
@@ -360,22 +352,9 @@ func mapIssuePtr(i *gitlab.Issue) *repository.Issue {
 	return &issue
 }
 
-// extractProjectIDFromURL extracts the project ID from a GitLab repository URL
-func (s gitlabService) extractProjectIDFromURL(repoURL string) (string, error) {
-	// Parse URL to extract the project path
-	u, err := url.Parse(repoURL)
-	if err != nil {
-		return "", err
-	}
-
-	// Remove .git suffix if present and leading/trailing slashes
-	path := strings.TrimSuffix(strings.Trim(u.Path, "/"), ".git")
-
-	return path, nil
-}
-
 // extractTarGz extracts a tar.gz archive
 func (s gitlabService) extractTarGz(reader io.Reader, destDir string) error {
+	// TODO(#52): Move to a separate package when implementing GitHub "clone" through downloading archives
 	gzReader, err := gzip.NewReader(reader)
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)

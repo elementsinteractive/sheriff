@@ -30,5 +30,5 @@ type IRepositoryService interface {
 	GetProjectList(paths []string) (projects []Project, warn error)
 	CloseVulnerabilityIssue(project Project) error
 	OpenVulnerabilityIssue(project Project, report string) (*Issue, error)
-	Clone(url string, dir string) error
+	Clone(project Project, dir string) error
 }
