@@ -406,6 +406,9 @@ func (s gitlabService) extractTarGz(reader io.Reader, destDir string) error {
 		}
 
 		targetPath := filepath.Join(destDir, relativePath)
+		if !strings.HasPrefix(targetPath, filepath.Clean(destDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("content of tar file is trying to write outside of destination directory: %s", relativePath)
+		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
