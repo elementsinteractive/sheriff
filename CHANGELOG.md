@@ -1,3 +1,18 @@
+## v0.25.8 (2025-09-18)
+
+### Refactor
+
+- add `GroupOrOwner` to `Project` struct
+- **#52**: download gh repo instead of using git clone
+
+### CI
+
+- make lgtm publish reviews
+
+### Tests
+
+- fix test for download
+
 ## v0.25.7 (2025-09-18)
 
 ### CI

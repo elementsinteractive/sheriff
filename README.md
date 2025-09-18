@@ -266,7 +266,7 @@ To run sheriff on Gitlab, we suggest the following set-up:
 2. Create a CI file in this repository which extends from our template
     ```yaml
     include:
-      - remote: 'https://raw.githubusercontent.com/elementsinteractive/sheriff/refs/tags/v0.25.7/gitlab/templates/sheriff.gitlab-ci.yml'
+      - remote: 'https://raw.githubusercontent.com/elementsinteractive/sheriff/refs/tags/v0.25.8/gitlab/templates/sheriff.gitlab-ci.yml'
 
     sheriff:
       extends: .sheriff
