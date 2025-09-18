@@ -173,7 +173,7 @@ func TestDownload(t *testing.T) {
 }
 
 func TestOpenVulnerabilityIssue(t *testing.T) {
-	title := "666"
+	title := repository.VulnerabilityIssueTitle
 	mockClient := mockService{}
 	mockClient.On("ListRepositoryIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*github.Issue{}, &github.Response{}, nil)
 	mockClient.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(&github.Issue{Title: &title}, &github.Response{}, nil)
@@ -183,18 +183,22 @@ func TestOpenVulnerabilityIssue(t *testing.T) {
 	i, err := svc.OpenVulnerabilityIssue(repository.Project{GroupOrOwner: "group", Name: "repo"}, "report")
 	assert.Nil(t, err)
 	assert.NotNil(t, i)
-	assert.Equal(t, "666", i.Title)
+	assert.Equal(t, repository.VulnerabilityIssueTitle, i.Title)
+	mockClient.AssertExpectations(t)
 }
 
 func TestCloseVulnerabilityIssue(t *testing.T) {
-	title := "288"
+	title := repository.VulnerabilityIssueTitle
+	state := "open"
 	mockClient := mockService{}
-	mockClient.On("ListRepositoryIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*github.Issue{{Title: &title}}, &github.Response{}, nil)
+	mockClient.On("ListRepositoryIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*github.Issue{{Title: &title, State: &state}}, &github.Response{}, nil)
+	mockClient.On("UpdateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
 
 	svc := githubService{client: &mockClient}
 
 	err := svc.CloseVulnerabilityIssue(repository.Project{GroupOrOwner: "group", Name: "repo"})
 	assert.Nil(t, err)
+	mockClient.AssertExpectations(t)
 }
 
 func TestCloseVulnerabilityIssueNoIssue(t *testing.T) {
@@ -205,6 +209,7 @@ func TestCloseVulnerabilityIssueNoIssue(t *testing.T) {
 
 	err := svc.CloseVulnerabilityIssue(repository.Project{GroupOrOwner: "group", Name: "repo"})
 	assert.Nil(t, err)
+	mockClient.AssertExpectations(t)
 }
 
 type mockService struct {
