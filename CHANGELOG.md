@@ -1,3 +1,9 @@
+## v0.25.7 (2025-09-18)
+
+### CI
+
+- use lgtm-ai code reviewer action
+
 ## v0.25.6 (2025-09-17)
 
 ### Fix
