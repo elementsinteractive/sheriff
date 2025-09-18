@@ -217,7 +217,6 @@ func derefRepoPtrs(owner string, repoPtrs []*github.Repository) (repos []github.
 }
 
 func mapGithubProject(r github.Repository) repository.Project {
-	// log.Warn().Str("id", fmt.Sprint(r.GetID())).Str("name", r.GetName()).Str("full_name", r.GetFullName()).Str("owner", r.GetOwner().Name).Msg("Mapping GitHub project")
 	var groupName = ""
 	owner := r.GetOwner()
 	if owner != nil {

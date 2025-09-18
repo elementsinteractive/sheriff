@@ -175,7 +175,7 @@ func TestDownload(t *testing.T) {
 
 	// Setup mock client
 	mockService := mockService{}
-	mockService.On("GetArchiveLink", "owner", "repo", github.Tarball, mock.Anything).Return(archiveURL, &github.Response{}, nil)
+	mockService.On("GetArchiveLink", "owner", "test-project", github.Tarball, mock.Anything).Return(archiveURL, &github.Response{}, nil)
 
 	svc := githubService{
 		client: &mockService,
@@ -189,7 +189,7 @@ func TestDownload(t *testing.T) {
 		ID:           123,
 		Name:         "test-project",
 		GroupOrOwner: "owner",
-		Path:         "owner/repo",
+		Path:         "owner/test-project",
 	}
 
 	err = svc.Download(testProject, tempDir)
