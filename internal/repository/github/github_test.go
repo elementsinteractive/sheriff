@@ -252,7 +252,7 @@ func (c *mockService) GetArchiveLink(owner string, repo string, archiveFormat gi
 	return args.Get(0).(*url.URL), r, args.Error(2)
 }
 
-func (c *mockService) ListRepositoryIssues(owner, repo string, opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+func (c *mockService) ListRepositoryIssues(owner string, repo string, opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 	args := c.Called(owner, repo, opts)
 	var r *github.Response
 	if resp := args.Get(1); resp != nil {
@@ -264,8 +264,8 @@ func (c *mockService) ListRepositoryIssues(owner, repo string, opts *github.Issu
 	return args.Get(0).([]*github.Issue), r, args.Error(2)
 }
 
-func (c *mockService) CreateIssue(owner, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
-	args := c.Called(owner, repo)
+func (c *mockService) CreateIssue(owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	args := c.Called(owner, repo, issue)
 	var r *github.Response
 	if resp := args.Get(1); resp != nil {
 		r = args.Get(1).(*github.Response)
@@ -274,7 +274,7 @@ func (c *mockService) CreateIssue(owner, repo string, issue *github.IssueRequest
 }
 
 func (c *mockService) UpdateIssue(owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
-	args := c.Called(owner, repo)
+	args := c.Called(owner, repo, number, issue)
 	var r *github.Response
 	if resp := args.Get(1); resp != nil {
 		r = args.Get(1).(*github.Response)
