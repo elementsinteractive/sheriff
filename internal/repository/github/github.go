@@ -14,6 +14,7 @@ import (
 	"github.com/elliotchance/pie/v2"
 	"github.com/google/go-github/v68/github"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,7 +26,11 @@ type githubService struct {
 
 // newGithubRepo creates a new GitHub repository service
 func New(token string) githubService {
-	client := github.NewClient(nil)
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	tc := oauth2.NewClient(context.Background(), ts)
+	client := github.NewClient(tc)
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -70,12 +75,101 @@ func (s githubService) GetProjectList(paths []string) (projects []repository.Pro
 
 // CloseVulnerabilityIssue closes the vulnerability issue for the given project
 func (s githubService) CloseVulnerabilityIssue(project repository.Project) (err error) {
-	return errors.New("CloseVulnerabilityIssue not yet implemented") // TODO #9 Add github support
+	issue, err := s.getVulnerabilityIssue(project.GroupOrOwner, project.Name)
+	if err != nil {
+		return fmt.Errorf("failed to fetch current list of issues: %w", err)
+	}
+	if issue == nil {
+		log.Info().Str("project", project.Path).Msg("No issue to close, nothing to do")
+		return nil
+	}
+	if issue.GetState() == "closed" {
+		log.Info().Str("project", project.Path).Msg("Issue already closed")
+		return nil
+	}
+	state := "closed"
+	_, _, err = s.client.UpdateIssue(project.GroupOrOwner, project.Name, issue.GetNumber(), &github.IssueRequest{
+		State: &state,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update issue: %w", err)
+	}
+	log.Info().Str("project", project.Path).Msg("Issue closed")
+	return nil
 }
 
 // OpenVulnerabilityIssue opens or updates the vulnerability issue for the given project
 func (s githubService) OpenVulnerabilityIssue(project repository.Project, report string) (issue *repository.Issue, err error) {
-	return nil, errors.New("OpenVulnerabilityIssue not yet implemented") // TODO #9 Add github support
+	vulnTitle := repository.VulnerabilityIssueTitle
+	ghIssue, err := s.getVulnerabilityIssue(project.GroupOrOwner, project.Name)
+	if err != nil {
+		return nil, fmt.Errorf("[%v] Failed to fetch current list of issues: %w", project.Path, err)
+	}
+	if ghIssue == nil {
+		log.Info().Str("project", project.Path).Msg("Creating new issue")
+		newIssue := &github.IssueRequest{
+			Title: &vulnTitle,
+			Body:  &report,
+		}
+		created, _, err := s.client.CreateIssue(project.GroupOrOwner, project.Name, newIssue)
+		if err != nil {
+			return nil, fmt.Errorf("[%v] failed to create new issue: %w", project.Path, err)
+		}
+		return mapGithubIssuePtr(created), nil
+	}
+	log.Info().Str("project", project.Path).Int("issue", ghIssue.GetNumber()).Msg("Updating existing issue")
+	state := "open"
+	updatedIssue := &github.IssueRequest{
+		Body:  &report,
+		State: &state,
+	}
+	edited, _, err := s.client.UpdateIssue(project.GroupOrOwner, project.Name, ghIssue.GetNumber(), updatedIssue)
+	if err != nil {
+		return nil, fmt.Errorf("[%v] Failed to update issue: %w", project.Path, err)
+	}
+	if edited.GetState() != "open" {
+		return nil, errors.New("failed to reopen issue")
+	}
+	return mapGithubIssuePtr(edited), nil
+}
+
+// getVulnerabilityIssue returns the vulnerability issue for the given repo (by title)
+func (s githubService) getVulnerabilityIssue(owner, repo string) (*github.Issue, error) {
+	opts := &github.IssueListByRepoOptions{
+		State:       "all",
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	vulnTitle := repository.VulnerabilityIssueTitle
+	for {
+		issues, resp, err := s.client.ListRepositoryIssues(owner, repo, opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, issue := range issues {
+			if issue != nil && issue.GetTitle() == vulnTitle {
+				return issue, nil
+			}
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return nil, nil
+}
+func mapGithubIssue(i github.Issue) repository.Issue {
+	return repository.Issue{
+		Title:  i.GetTitle(),
+		WebURL: i.GetHTMLURL(),
+	}
+}
+
+func mapGithubIssuePtr(i *github.Issue) *repository.Issue {
+	if i == nil {
+		return nil
+	}
+	issue := mapGithubIssue(*i)
+	return &issue
 }
 
 func (s githubService) Download(project repository.Project, dir string) (err error) {
