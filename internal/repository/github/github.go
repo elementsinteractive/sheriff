@@ -78,17 +78,9 @@ func (s githubService) OpenVulnerabilityIssue(project repository.Project, report
 	return nil, errors.New("OpenVulnerabilityIssue not yet implemented") // TODO #9 Add github support
 }
 
-func (s githubService) DownloadRepository(project repository.Project, dir string) (err error) {
-	// Extract owner and repo from project path (format: "owner/repo")
-	owner, repo, err := s.extractOwnerRepo(project.Path)
-	if err != nil {
-		return fmt.Errorf("failed to extract owner/repo from path %s: %w", project.Path, err)
-	}
-
-	log.Debug().Str("owner", owner).Str("repo", repo).Str("dir", dir).Msg("Downloading GitHub archive")
-
+func (s githubService) Download(project repository.Project, dir string) (err error) {
 	// Get archive download URL using GitHub API
-	archiveURL, _, err := s.client.GetArchiveLink(owner, repo, github.Tarball, &github.RepositoryContentGetOptions{})
+	archiveURL, _, err := s.client.GetArchiveLink(project.GroupOrOwner, project.Name, github.Tarball, &github.RepositoryContentGetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub archive link: %w", err)
 	}
@@ -225,14 +217,22 @@ func derefRepoPtrs(owner string, repoPtrs []*github.Repository) (repos []github.
 }
 
 func mapGithubProject(r github.Repository) repository.Project {
+	// log.Warn().Str("id", fmt.Sprint(r.GetID())).Str("name", r.GetName()).Str("full_name", r.GetFullName()).Str("owner", r.GetOwner().Name).Msg("Mapping GitHub project")
+	var groupName = ""
+	owner := r.GetOwner()
+	if owner != nil {
+		groupName = owner.GetLogin()
+	}
+
 	return repository.Project{
-		ID:         int(valueOrEmpty(r.ID)),
-		Name:       valueOrEmpty(r.Name),
-		Path:       valueOrEmpty(r.FullName),
-		Slug:       valueOrEmpty(r.Name),
-		WebURL:     valueOrEmpty(r.HTMLURL),
-		RepoUrl:    valueOrEmpty(r.HTMLURL),
-		Repository: repository.Github,
+		ID:           int(valueOrEmpty(r.ID)),
+		Name:         valueOrEmpty(r.Name),
+		GroupOrOwner: valueOrEmpty(&groupName),
+		Path:         valueOrEmpty(r.FullName),
+		Slug:         valueOrEmpty(r.Name),
+		WebURL:       valueOrEmpty(r.HTMLURL),
+		RepoUrl:      valueOrEmpty(r.HTMLURL),
+		Repository:   repository.Github,
 	}
 }
 
@@ -242,13 +242,4 @@ func valueOrEmpty[T interface{}](val *T) (r T) {
 	}
 
 	return r
-}
-
-// extractOwnerRepo extracts owner and repo name from GitHub project path
-func (s githubService) extractOwnerRepo(path string) (owner, repo string, err error) {
-	parts := strings.Split(path, "/")
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid GitHub project path format, expected 'owner/repo', got: %s", path)
-	}
-	return parts[0], parts[1], nil
 }

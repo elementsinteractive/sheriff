@@ -198,7 +198,7 @@ func (s *sheriffService) scanProject(project repository.Project) (report *scanne
 
 	// Download the project
 	log.Info().Str("project", project.Path).Str("dir", dir).Str("url", project.RepoUrl).Msg("Cloning project")
-	if err := s.repoService.Provide(project.Repository).DownloadRepository(project, dir); err != nil {
+	if err := s.repoService.Provide(project.Repository).Download(project, dir); err != nil {
 		return nil, errors.Join(fmt.Errorf("failed to clone project %v", project.Path), err)
 	}
 

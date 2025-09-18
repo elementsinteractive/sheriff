@@ -202,7 +202,7 @@ func TestDereferenceProjectsPointers(t *testing.T) {
 	assert.Equal(t, 2, dereferencedProjects[1].ID)
 	assert.Equal(t, 2, errCount)
 }
-func TestDownloadRepository(t *testing.T) {
+func TestDownload(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "sheriff-clone-test-")
 	require.NoError(t, err)
@@ -218,12 +218,13 @@ func TestDownloadRepository(t *testing.T) {
 
 	// Create a test project
 	testProject := repository.Project{
-		ID:   123,
-		Name: "test-project",
-		Path: "group/project",
+		ID:           123,
+		Name:         "test-project",
+		GroupOrOwner: "group",
+		Path:         "group/project",
 	}
 
-	err = svc.DownloadRepository(testProject, tempDir)
+	err = svc.Download(testProject, tempDir)
 
 	// Verify no errors
 	assert.NoError(t, err)

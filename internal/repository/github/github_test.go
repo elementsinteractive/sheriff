@@ -149,7 +149,7 @@ func (c *mockService) GetArchiveLink(owner string, repo string, archiveFormat gi
 	return args.Get(0).(*url.URL), r, args.Error(2)
 }
 
-func TestDownloadRepository(t *testing.T) {
+func TestDownload(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "sheriff-clone-test-")
 	require.NoError(t, err)
@@ -186,12 +186,13 @@ func TestDownloadRepository(t *testing.T) {
 
 	// Create a test project
 	testProject := repository.Project{
-		ID:   123,
-		Name: "test-project",
-		Path: "owner/repo",
+		ID:           123,
+		Name:         "test-project",
+		GroupOrOwner: "owner",
+		Path:         "owner/repo",
 	}
 
-	err = svc.DownloadRepository(testProject, tempDir)
+	err = svc.Download(testProject, tempDir)
 
 	// Verify no errors
 	assert.NoError(t, err)

@@ -116,7 +116,7 @@ func (s gitlabService) OpenVulnerabilityIssue(project repository.Project, report
 	return
 }
 
-func (s gitlabService) DownloadRepository(project repository.Project, dir string) (err error) {
+func (s gitlabService) Download(project repository.Project, dir string) (err error) {
 	archiveData, _, err := s.client.Archive(project.ID, &gitlab.ArchiveOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to download archive: %w", err)
@@ -320,14 +320,21 @@ func dereferenceProjectsPointers(projects []*gitlab.Project) (filteredProjects [
 }
 
 func mapProject(p gitlab.Project) repository.Project {
+	group := ""
+	namespace := p.Namespace
+	if namespace != nil {
+		group = namespace.Name
+	}
+
 	return repository.Project{
-		ID:         p.ID,
-		Name:       p.Name,
-		Slug:       p.Path,
-		Path:       p.PathWithNamespace,
-		WebURL:     p.WebURL,
-		RepoUrl:    p.HTTPURLToRepo,
-		Repository: repository.Gitlab,
+		ID:           p.ID,
+		Name:         p.Name,
+		Slug:         p.Path,
+		GroupOrOwner: group,
+		Path:         p.PathWithNamespace,
+		WebURL:       p.WebURL,
+		RepoUrl:      p.HTTPURLToRepo,
+		Repository:   repository.Gitlab,
 	}
 }
 
