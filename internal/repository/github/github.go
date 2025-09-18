@@ -88,7 +88,7 @@ func (s githubService) CloseVulnerabilityIssue(project repository.Project) (err 
 		return nil
 	}
 	state := "closed"
-	_, _, err = s.client.UpdateIssue(project.GroupOrOwner, project.GroupOrOwner, issue.GetNumber(), &github.IssueRequest{
+_, _, err = s.client.UpdateIssue(project.GroupOrOwner, project.Name, issue.GetNumber(), &github.IssueRequest{
 		State: &state,
 	})
 	if err != nil {
