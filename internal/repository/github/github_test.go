@@ -109,46 +109,6 @@ func TestGetProjectListWithNextPage(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
-type mockService struct {
-	mock.Mock
-}
-
-func (c *mockService) GetRepository(owner string, repo string) (*github.Repository, *github.Response, error) {
-	args := c.Called(owner, repo)
-	var r *github.Response
-	if resp := args.Get(1); resp != nil {
-		r = args.Get(1).(*github.Response)
-	}
-	return args.Get(0).(*github.Repository), r, args.Error(2)
-}
-
-func (c *mockService) GetOrganizationRepositories(org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error) {
-	args := c.Called(org, opts)
-	var r *github.Response
-	if resp := args.Get(1); resp != nil {
-		r = args.Get(1).(*github.Response)
-	}
-	return args.Get(0).([]*github.Repository), r, args.Error(2)
-}
-
-func (c *mockService) GetUserRepositories(user string, opts *github.RepositoryListByUserOptions) ([]*github.Repository, *github.Response, error) {
-	args := c.Called(user, opts)
-	var r *github.Response
-	if resp := args.Get(1); resp != nil {
-		r = args.Get(1).(*github.Response)
-	}
-	return args.Get(0).([]*github.Repository), r, args.Error(2)
-}
-
-func (c *mockService) GetArchiveLink(owner string, repo string, archiveFormat github.ArchiveFormat, opts *github.RepositoryContentGetOptions) (*url.URL, *github.Response, error) {
-	args := c.Called(owner, repo, archiveFormat, opts)
-	var r *github.Response
-	if resp := args.Get(1); resp != nil {
-		r = args.Get(1).(*github.Response)
-	}
-	return args.Get(0).(*url.URL), r, args.Error(2)
-}
-
 func TestDownload(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "sheriff-clone-test-")
@@ -210,4 +170,109 @@ func TestDownload(t *testing.T) {
 	// Verify directory structure
 	_, err = os.Stat(filepath.Join(tempDir, "src"))
 	assert.NoError(t, err, "src directory should exist")
+}
+
+func TestOpenVulnerabilityIssue(t *testing.T) {
+	title := "666"
+	mockClient := mockService{}
+	mockClient.On("ListRepositoryIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*github.Issue{}, &github.Response{}, nil)
+	mockClient.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(&github.Issue{Title: &title}, &github.Response{}, nil)
+
+	svc := githubService{client: &mockClient}
+
+	i, err := svc.OpenVulnerabilityIssue(repository.Project{GroupOrOwner: "group", Name: "repo"}, "report")
+	assert.Nil(t, err)
+	assert.NotNil(t, i)
+	assert.Equal(t, "666", i.Title)
+}
+
+func TestCloseVulnerabilityIssue(t *testing.T) {
+	title := "288"
+	mockClient := mockService{}
+	mockClient.On("ListRepositoryIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*github.Issue{{Title: &title}}, &github.Response{}, nil)
+
+	svc := githubService{client: &mockClient}
+
+	err := svc.CloseVulnerabilityIssue(repository.Project{GroupOrOwner: "group", Name: "repo"})
+	assert.Nil(t, err)
+}
+
+func TestCloseVulnerabilityIssueNoIssue(t *testing.T) {
+	mockClient := mockService{}
+	mockClient.On("ListRepositoryIssues", mock.Anything, mock.Anything, mock.Anything).Return(nil, &github.Response{}, nil)
+
+	svc := githubService{client: &mockClient}
+
+	err := svc.CloseVulnerabilityIssue(repository.Project{GroupOrOwner: "group", Name: "repo"})
+	assert.Nil(t, err)
+}
+
+type mockService struct {
+	mock.Mock
+}
+
+func (c *mockService) GetRepository(owner string, repo string) (*github.Repository, *github.Response, error) {
+	args := c.Called(owner, repo)
+	var r *github.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*github.Response)
+	}
+	return args.Get(0).(*github.Repository), r, args.Error(2)
+}
+
+func (c *mockService) GetOrganizationRepositories(org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error) {
+	args := c.Called(org, opts)
+	var r *github.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*github.Response)
+	}
+	return args.Get(0).([]*github.Repository), r, args.Error(2)
+}
+
+func (c *mockService) GetUserRepositories(user string, opts *github.RepositoryListByUserOptions) ([]*github.Repository, *github.Response, error) {
+	args := c.Called(user, opts)
+	var r *github.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*github.Response)
+	}
+	return args.Get(0).([]*github.Repository), r, args.Error(2)
+}
+
+func (c *mockService) GetArchiveLink(owner string, repo string, archiveFormat github.ArchiveFormat, opts *github.RepositoryContentGetOptions) (*url.URL, *github.Response, error) {
+	args := c.Called(owner, repo, archiveFormat, opts)
+	var r *github.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*github.Response)
+	}
+	return args.Get(0).(*url.URL), r, args.Error(2)
+}
+
+func (c *mockService) ListRepositoryIssues(owner, repo string, opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+	args := c.Called(owner, repo, opts)
+	var r *github.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*github.Response)
+	}
+	if args.Get(0) == nil {
+		return nil, r, args.Error(2)
+	}
+	return args.Get(0).([]*github.Issue), r, args.Error(2)
+}
+
+func (c *mockService) CreateIssue(owner, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	args := c.Called(owner, repo)
+	var r *github.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*github.Response)
+	}
+	return args.Get(0).(*github.Issue), r, args.Error(2)
+}
+
+func (c *mockService) UpdateIssue(owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	args := c.Called(owner, repo)
+	var r *github.Response
+	if resp := args.Get(1); resp != nil {
+		r = args.Get(1).(*github.Response)
+	}
+	return args.Get(0).(*github.Issue), r, args.Error(2)
 }
