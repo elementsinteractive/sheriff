@@ -1,29 +1,40 @@
 package github
 
 import (
+	"context"
 	"errors"
 	"fmt"
+
+	"net/http"
+	"sheriff/internal/compress"
 	"sheriff/internal/repository"
 	"strings"
+	"time"
 
 	"github.com/elliotchance/pie/v2"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-github/v68/github"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 )
 
 type githubService struct {
-	client iGithubClient
-	token  string
+	client     iGithubClient
+	httpClient *http.Client
+	token      string
 }
 
 // newGithubRepo creates a new GitHub repository service
 func New(token string) githubService {
 	client := github.NewClient(nil)
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 
-	s := githubService{client: &githubClient{client: client}, token: token}
+	s := githubService{
+		client:     &githubClient{client: client},
+		httpClient: httpClient,
+		token:      token,
+	}
 
 	return s
 }
@@ -67,17 +78,36 @@ func (s githubService) OpenVulnerabilityIssue(project repository.Project, report
 	return nil, errors.New("OpenVulnerabilityIssue not yet implemented") // TODO #9 Add github support
 }
 
-func (s githubService) Clone(project repository.Project, dir string) (err error) {
-	_, err = git.PlainClone(dir, false, &git.CloneOptions{
-		URL: project.RepoUrl,
-		Auth: &http.BasicAuth{
-			Username: "N/A",
-			Password: s.token,
-		},
-		Depth: 1,
-	})
+func (s githubService) Download(project repository.Project, dir string) (err error) {
+	// Get archive download URL using GitHub API
+	archiveURL, _, err := s.client.GetArchiveLink(project.GroupOrOwner, project.Name, github.Tarball, &github.RepositoryContentGetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub archive link: %w", err)
+	}
 
-	return err
+	log.Debug().Str("archiveURL", archiveURL.String()).Msg("Got GitHub archive URL")
+
+	// Create request with context
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", archiveURL.String(), nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Download the archive from the URL using the shared HTTP client
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to download GitHub archive: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download GitHub archive, status: %s", resp.Status)
+	}
+
+	return compress.ExtractTarGz(resp.Body, dir)
 }
 
 func (s githubService) getPathRepos(path string) (repositories []github.Repository, err error) {
@@ -187,14 +217,21 @@ func derefRepoPtrs(owner string, repoPtrs []*github.Repository) (repos []github.
 }
 
 func mapGithubProject(r github.Repository) repository.Project {
+	var groupName = ""
+	owner := r.GetOwner()
+	if owner != nil {
+		groupName = owner.GetLogin()
+	}
+
 	return repository.Project{
-		ID:         int(valueOrEmpty(r.ID)),
-		Name:       valueOrEmpty(r.Name),
-		Path:       valueOrEmpty(r.FullName),
-		Slug:       valueOrEmpty(r.Name),
-		WebURL:     valueOrEmpty(r.HTMLURL),
-		RepoUrl:    valueOrEmpty(r.HTMLURL),
-		Repository: repository.Github,
+		ID:           int(valueOrEmpty(r.ID)),
+		Name:         valueOrEmpty(r.Name),
+		GroupOrOwner: valueOrEmpty(&groupName),
+		Path:         valueOrEmpty(r.FullName),
+		Slug:         valueOrEmpty(r.Name),
+		WebURL:       valueOrEmpty(r.HTMLURL),
+		RepoUrl:      valueOrEmpty(r.HTMLURL),
+		Repository:   repository.Github,
 	}
 }
 

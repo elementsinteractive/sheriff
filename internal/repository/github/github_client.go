@@ -1,8 +1,9 @@
-// Package gitlab provides a GitLab service to interact with the GitLab API.
+// Package github provides a GitHub service to interact with the GitHub API.
 package github
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/google/go-github/v68/github"
 )
@@ -15,6 +16,7 @@ type iGithubClient interface {
 	GetRepository(owner string, repo string) (*github.Repository, *github.Response, error)
 	GetOrganizationRepositories(org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error)
 	GetUserRepositories(user string, opts *github.RepositoryListByUserOptions) ([]*github.Repository, *github.Response, error)
+	GetArchiveLink(owner string, repo string, archiveFormat github.ArchiveFormat, opts *github.RepositoryContentGetOptions) (*url.URL, *github.Response, error)
 }
 
 type githubClient struct {
@@ -31,4 +33,8 @@ func (c *githubClient) GetOrganizationRepositories(org string, opts *github.Repo
 
 func (c *githubClient) GetUserRepositories(user string, opts *github.RepositoryListByUserOptions) ([]*github.Repository, *github.Response, error) {
 	return c.client.Repositories.ListByUser(context.Background(), user, opts)
+}
+
+func (c *githubClient) GetArchiveLink(owner string, repo string, archiveFormat github.ArchiveFormat, opts *github.RepositoryContentGetOptions) (*url.URL, *github.Response, error) {
+	return c.client.Repositories.GetArchiveLink(context.Background(), owner, repo, archiveFormat, opts, 3)
 }

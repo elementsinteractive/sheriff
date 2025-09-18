@@ -10,13 +10,14 @@ const (
 )
 
 type Project struct {
-	ID         int
-	Name       string
-	Slug       string
-	Path       string
-	WebURL     string
-	RepoUrl    string
-	Repository RepositoryType
+	ID           int
+	Name         string
+	Slug         string
+	GroupOrOwner string
+	Path         string
+	WebURL       string
+	RepoUrl      string
+	Repository   RepositoryType
 }
 
 type Issue struct {
@@ -30,5 +31,5 @@ type IRepositoryService interface {
 	GetProjectList(paths []string) (projects []Project, warn error)
 	CloseVulnerabilityIssue(project Project) error
 	OpenVulnerabilityIssue(project Project, report string) (*Issue, error)
-	Clone(project Project, dir string) error
+	Download(project Project, dir string) error
 }

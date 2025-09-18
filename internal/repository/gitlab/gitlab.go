@@ -1,16 +1,12 @@
 package gitlab
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
+	"sheriff/internal/compress"
 	"sheriff/internal/repository"
-	"strings"
 	"sync"
 
 	"github.com/elliotchance/pie/v2"
@@ -120,7 +116,7 @@ func (s gitlabService) OpenVulnerabilityIssue(project repository.Project, report
 	return
 }
 
-func (s gitlabService) Clone(project repository.Project, dir string) (err error) {
+func (s gitlabService) Download(project repository.Project, dir string) (err error) {
 	archiveData, _, err := s.client.Archive(project.ID, &gitlab.ArchiveOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to download archive: %w", err)
@@ -131,8 +127,8 @@ func (s gitlabService) Clone(project repository.Project, dir string) (err error)
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Extract archive to directory
-	return s.extractTarGz(bytes.NewReader(archiveData), dir)
+	// Extract archive to directory using the shared compress package
+	return compress.ExtractTarGz(bytes.NewReader(archiveData), dir)
 }
 
 // This function receives a list of paths which can be gitlab projects or groups
@@ -324,14 +320,21 @@ func dereferenceProjectsPointers(projects []*gitlab.Project) (filteredProjects [
 }
 
 func mapProject(p gitlab.Project) repository.Project {
+	group := ""
+	namespace := p.Namespace
+	if namespace != nil {
+		group = namespace.Name
+	}
+
 	return repository.Project{
-		ID:         p.ID,
-		Name:       p.Name,
-		Slug:       p.Path,
-		Path:       p.PathWithNamespace,
-		WebURL:     p.WebURL,
-		RepoUrl:    p.HTTPURLToRepo,
-		Repository: repository.Gitlab,
+		ID:           p.ID,
+		Name:         p.Name,
+		Slug:         p.Path,
+		GroupOrOwner: group,
+		Path:         p.PathWithNamespace,
+		WebURL:       p.WebURL,
+		RepoUrl:      p.HTTPURLToRepo,
+		Repository:   repository.Gitlab,
 	}
 }
 
@@ -350,66 +353,4 @@ func mapIssuePtr(i *gitlab.Issue) *repository.Issue {
 	issue := mapIssue(*i)
 
 	return &issue
-}
-
-// extractTarGz extracts a tar.gz archive
-func (s gitlabService) extractTarGz(reader io.Reader, destDir string) error {
-	// TODO(#52): Move to a separate package when implementing GitHub "clone" through downloading archives
-	gzReader, err := gzip.NewReader(reader)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzReader.Close()
-
-	tarReader := tar.NewReader(gzReader)
-
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar header: %w", err)
-		}
-
-		// Skip the root directory (GitLab archives have a root folder)
-		pathParts := strings.Split(header.Name, "/")
-		if len(pathParts) <= 1 {
-			continue
-		}
-
-		// Remove the first directory component (the root folder)
-		relativePath := strings.Join(pathParts[1:], "/")
-		if relativePath == "" {
-			continue
-		}
-
-		targetPath := filepath.Join(destDir, relativePath)
-		if !strings.HasPrefix(targetPath, filepath.Clean(destDir)+string(os.PathSeparator)) {
-			return fmt.Errorf("content of tar file is trying to write outside of destination directory: %s", relativePath)
-		}
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(targetPath, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", targetPath, err)
-			}
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-				return fmt.Errorf("failed to create parent directory for %s: %w", targetPath, err)
-			}
-
-			file, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(header.Mode))
-			if err != nil {
-				return fmt.Errorf("failed to create file %s: %w", targetPath, err)
-			}
-			defer file.Close()
-
-			if _, err := io.Copy(file, tarReader); err != nil {
-				return fmt.Errorf("failed to write file %s: %w", targetPath, err)
-			}
-		}
-	}
-
-	return nil
 }

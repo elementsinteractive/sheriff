@@ -52,7 +52,7 @@ func TestScanNonVulnerableProject(t *testing.T) {
 	mockClient := &mockClient{}
 	mockClient.On("GetProjectList", []string{"group/to/scan"}).Return([]repository.Project{{Name: "Hello World", RepoUrl: "https://gitlab.com/group/to/scan.git", Repository: repository.Gitlab}}, nil)
 	mockClient.On("CloseVulnerabilityIssue", mock.Anything).Return(nil)
-	mockClient.On("Clone", "https://gitlab.com/group/to/scan.git", mock.Anything).Return(nil)
+	mockClient.On("Download", "https://gitlab.com/group/to/scan.git", mock.Anything).Return(nil)
 
 	mockRepoService := &mockRepoService{}
 	mockRepoService.On("Provide", repository.Gitlab).Return(mockClient)
@@ -87,7 +87,7 @@ func TestScanVulnerableProject(t *testing.T) {
 	mockClient := &mockClient{}
 	mockClient.On("GetProjectList", []string{"group/to/scan"}).Return([]repository.Project{{Name: "Hello World", RepoUrl: "https://gitlab.com/group/to/scan.git", Repository: repository.Gitlab}}, nil)
 	mockClient.On("OpenVulnerabilityIssue", mock.Anything, mock.Anything).Return(&repository.Issue{}, nil)
-	mockClient.On("Clone", "https://gitlab.com/group/to/scan.git", mock.Anything).Return(nil)
+	mockClient.On("Download", "https://gitlab.com/group/to/scan.git", mock.Anything).Return(nil)
 
 	mockRepoService := &mockRepoService{}
 	mockRepoService.On("Provide", repository.Gitlab).Return(mockClient)
@@ -239,7 +239,7 @@ func (c *mockClient) OpenVulnerabilityIssue(project repository.Project, report s
 	return args.Get(0).(*repository.Issue), args.Error(1)
 }
 
-func (c *mockClient) Clone(project repository.Project, dir string) error {
+func (c *mockClient) Download(project repository.Project, dir string) error {
 	args := c.Called(project.RepoUrl, dir)
 	return args.Error(0)
 }
