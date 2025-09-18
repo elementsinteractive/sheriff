@@ -1,3 +1,18 @@
+## v0.26.0 (2025-09-18)
+
+### Feat
+
+- support issues on GitHub
+
+### Fix
+
+- incorrect arg to UpdateIssue
+
+### Tests
+
+- more suggestions from lgtm for c.Called
+- improve tests
+
 ## v0.25.8 (2025-09-18)
 
 ### Refactor
