@@ -1,3 +1,10 @@
+## v0.26.1 (2025-09-22)
+
+### Fix
+
+- remove custom type for codes
+- make 128 no packages found not return an error
+
 ## v0.26.0 (2025-09-18)
 
 ### Feat
