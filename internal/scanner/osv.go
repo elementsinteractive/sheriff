@@ -13,6 +13,7 @@ import (
 )
 
 type osvReferenceKind string
+type osvReturnCode int
 
 const (
 	OsvCommandName                  = "osv-scanner"
@@ -20,6 +21,10 @@ const (
 	WebKind        osvReferenceKind = "WEB"
 	PackageKind    osvReferenceKind = "PACKAGE"
 	osvTimeout                      = 5 * time.Minute
+	// https://google.github.io/osv-scanner/output/#return-codes
+	osvReturnCodeSuccess    osvReturnCode = 0
+	osvReturnCodeVulnsFound osvReturnCode = 1
+	osvReturnCodeNoPackages osvReturnCode = 128
 )
 
 type osvSource struct {
@@ -116,9 +121,12 @@ func (s *osvScanner) Scan(dir string) (*OsvReport, error) {
 	)
 
 	//Handle exit codes according to https://google.github.io/osv-scanner/output/#return-codes
-	if cmdOut.ExitCode == 0 && err == nil {
+	if cmdOut.ExitCode == int(osvReturnCodeSuccess) && err == nil {
 		// Successful run of osv-scanner, no report because no vulnerabilities found
 		log.Debug().Int("exitCode", cmdOut.ExitCode).Msg("osv-scanner did not find vulnerabilities")
+		return nil, nil
+	} else if cmdOut.ExitCode == int(osvReturnCodeNoPackages) {
+		log.Warn().Int("exitCode", cmdOut.ExitCode).Msg("osv-scanner did not find any packages to scan")
 		return nil, nil
 	} else if cmdOut.ExitCode > 1 || cmdOut.ExitCode == -1 {
 		// Failed to run osv-scanner at all, or it returned an error
