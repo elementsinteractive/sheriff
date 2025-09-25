@@ -1,3 +1,9 @@
+## v0.26.2 (2025-09-25)
+
+### Technical
+
+- bump osv-scanner to 2.x
+
 ## v0.26.1 (2025-09-22)
 
 ### Fix
