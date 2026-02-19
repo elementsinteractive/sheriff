@@ -1,7 +1,7 @@
 technologies = ["Golang"]
 categories = ["Correctness", "Quality", "Testing", "Security"]
 exclude = ["go.mod", "go.sum"]
-model = "gemini-2.5-flash-preview-*"
+model = "gemini-2.5-pro"
 silent = false
 publish = true
 ai_retries = 2
