@@ -1,3 +1,13 @@
+## v0.27.0 (2026-02-19)
+
+### Feat
+
+- **#69**: add retries and backoff to slack calls
+
+### CI
+
+- fix lgtm ai model
+
 ## v0.26.2 (2025-09-25)
 
 ### Technical
