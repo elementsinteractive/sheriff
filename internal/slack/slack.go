@@ -3,6 +3,7 @@ package slack
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/elliotchance/pie/v2"
@@ -18,6 +19,8 @@ type service struct {
 	client         iclient
 	maxAttempts    int
 	initialBackoff time.Duration
+	channelCache   map[string]*slack.Channel
+	cacheMutex     sync.RWMutex
 }
 
 type conversationsResult struct {
@@ -36,6 +39,7 @@ func New(token string, debug bool) (IService, error) {
 		client:         &client{client: slackClient},
 		maxAttempts:    5,
 		initialBackoff: 2 * time.Second,
+		channelCache:   make(map[string]*slack.Channel),
 	}
 
 	return &s, nil
@@ -68,6 +72,12 @@ func (s *service) findSlackChannel(channelName string) (channel *slack.Channel, 
 	var channels []slack.Channel
 	var channelTypes = []string{"private_channel", "public_channel"}
 
+	cachedChannel := s.getCachedChannel(channelName)
+	if cachedChannel != nil {
+		log.Debug().Str("channel", channelName).Msg("Found slack channel in cache")
+		return cachedChannel, nil
+	}
+
 	for {
 		result, opErr := runWithRetries(func() (conversationsResult, error) {
 			convChannels, convCursor, convErr := s.client.GetConversations(&slack.GetConversationsParameters{
@@ -92,6 +102,7 @@ func (s *service) findSlackChannel(channelName string) (channel *slack.Channel, 
 		if idx > -1 {
 			log.Info().Str("channel", channelName).Msg("Found slack channel")
 			channel = &channels[idx]
+			s.saveChannelToCache(channelName, channel)
 			return
 		} else if nextCursor == "" {
 			return nil, fmt.Errorf("channel %v not found", channelName)
@@ -99,6 +110,24 @@ func (s *service) findSlackChannel(channelName string) (channel *slack.Channel, 
 
 		log.Debug().Str("channel", channelName).Str("nextPage", nextCursor).Msg("Channel not found in current page, fetching next page")
 	}
+}
+
+// getCachedChannel retrieves a channel from the cache if it exists
+func (s *service) getCachedChannel(channelName string) (channel *slack.Channel) {
+	s.cacheMutex.RLock()
+	defer s.cacheMutex.RUnlock()
+	ch := s.channelCache[channelName]
+	return ch
+}
+
+// saveChannelToCache saves a channel to the cache
+func (s *service) saveChannelToCache(channelName string, channel *slack.Channel) {
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+	if s.channelCache == nil {
+		s.channelCache = make(map[string]*slack.Channel)
+	}
+	s.channelCache[channelName] = channel
 }
 
 func runWithRetries[T any](operation func() (T, error), maxAttempts int, backoff time.Duration) (result T, err error) {
