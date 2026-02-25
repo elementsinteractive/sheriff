@@ -185,3 +185,46 @@ func TestPostMessageWithDynamicRateLimitRetry(t *testing.T) {
 	elapsed := time.Since(start)
 	assert.GreaterOrEqual(t, elapsed, expectedWait, "should have used Slack's dynamic RetryAfter backoff")
 }
+
+func TestChannelIsCached(t *testing.T) {
+	channelID := "1234"
+	channelName := "random channel"
+
+	mockClient := mockClient{}
+	mockClient.On("GetConversations", &slack.GetConversationsParameters{
+		ExcludeArchived: true,
+		Cursor:          "",
+		Types:           []string{"private_channel", "public_channel"},
+		Limit:           1000,
+	}).Return(
+		[]slack.Channel{
+			{
+				GroupConversation: slack.GroupConversation{
+					Conversation: slack.Conversation{ID: channelID},
+					Name:         channelName,
+				},
+			},
+		},
+		"",
+		nil,
+	).Once() // Expect only one call to GetConversations
+
+	svc := service{
+		client:         &mockClient,
+		maxAttempts:    3,
+		initialBackoff: 2 * time.Second,
+	}
+
+	channel, err := svc.findSlackChannel(channelName)
+	assert.Nil(t, err)
+	assert.NotNil(t, channel)
+	assert.Equal(t, channelID, channel.ID)
+
+	// Call again to verify it uses the cache
+	cachedChannel, err := svc.findSlackChannel(channelName)
+	assert.Nil(t, err)
+	assert.NotNil(t, cachedChannel)
+	assert.Equal(t, channelID, cachedChannel.ID)
+
+	mockClient.AssertExpectations(t)
+}
