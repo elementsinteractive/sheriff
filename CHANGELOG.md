@@ -1,3 +1,9 @@
+## v0.27.1 (2026-02-25)
+
+### Perf
+
+- cache slack channel to avoid multiple calls to slack API
+
 ## v0.27.0 (2026-02-19)
 
 ### Feat
