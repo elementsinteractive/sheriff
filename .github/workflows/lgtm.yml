@@ -36,7 +36,7 @@ jobs:
           exit 1
 
       - name: Checkout PR code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: refs/pull/${{ github.event.issue.number }}/merge
 
